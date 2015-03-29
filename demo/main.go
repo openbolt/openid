@@ -15,6 +15,10 @@ func main() {
 
 	op.AddServer(mux)
 
+	if err := op.Serve(); err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Println("OpenID Connect 1.0 Core Provider demo started")
 	fmt.Println("Go to https://localhost:8443")
 	err := http.ListenAndServeTLS("localhost:8443", "demo.crt", "demo.pem", mux)

@@ -4,9 +4,20 @@ import (
 	"net/http"
 )
 
+type httpAPI struct {
+	srv *OpenID
+}
+
+func newHttpAPI(srv *OpenID) (*httpAPI, error) {
+	api := new(httpAPI)
+	api.srv = srv
+
+	return api, nil
+}
+
 // /authorize
 // ref 3.1.2.1
-func http_authorize(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) http_authorize(w http.ResponseWriter, r *http.Request) {
 	// Return if Method not GET or POST
 	if r.Method != "GET" && r.Method != "POST" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -27,18 +38,18 @@ func http_authorize(w http.ResponseWriter, r *http.Request) {
 		parms = Values(r.PostForm)
 	}
 
-	srv.Authorize(parms)
+	api.srv.Authorize(parms)
 	// TODO: Response handling
 }
 
 // /token
-func http_token(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) http_token(w http.ResponseWriter, r *http.Request) {
 }
 
 // /userinfo
-func http_userinfo(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) http_userinfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // /revoke
-func http_revoke(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) http_revoke(w http.ResponseWriter, r *http.Request) {
 }

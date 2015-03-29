@@ -2,33 +2,20 @@
 package openid
 
 import (
-	jwt "github.com/dgrijalva/jwt-go"
+	"errors"
 	"net/http"
-)
 
-// OAuthErrors
-// ref 18.3
-const (
-	interaction_required       = 0
-	login_required             = 1
-	account_selection_required = 2
-	consent_required           = 4
-	invalid_request_uri        = 8
-	invalid_request_object     = 16
-	request_not_supported      = 32
-	request_uri_not_supported  = 64
-	registration_not_supported = 128
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/openbolt/openid/utils"
 )
-
-// Runtimestore is an interface for getting and setting runtime data
-type Runtimestore interface {
-	// TODO: implement
-}
 
 type OpenID struct {
-	// Config
-	offline_access bool
-	token_expire   int // sec
+	// Datasources
+	claims *Claimsource
+	auth   *Authsource
+	client *Clientsource
+
+	// Config... going on
 }
 
 // NewProvider returns an blank OpenID Provider instance
@@ -36,25 +23,31 @@ func NewProvider() OpenID {
 	return OpenID{}
 }
 
-var srv *OpenID
-
 // Serve starts the OpenID Provider
+// TODO: Only accept requests when this is called
 func (op *OpenID) Serve() error {
-	srv = op
+	if op.claims == nil {
+		return errors.New("No claimsource defined")
+	}
+	if op.auth == nil {
+		return errors.New("No authsource defined")
+	}
+	if op.client == nil {
+		return errors.New("No clientsource defined")
+	}
+
 	return nil
 }
 
-// TODO: Continue!!!!!!
-// /authorize
+// Ref 3.1.2.1. Authentication Request
+// An Authentication Request is an OAuth 2.0 Authorization Request that requests
+// that the End-User be authenticated by the Authorization Server.
 func (op *OpenID) Authorize(parms Values) (AuthSuccessResp, AuthErrResp) {
-	// TODO: Switch to Hybrid, Implicit
-
-	// Authorization Code Flow
 	// ref 3.1.2.2
-	err1 := validate_oauth_params(parms)                                                                // ref Rule 1
-	err2 := validate_scope_param(parms)                                                                 // ref Rule 2
-	err3 := validate_req_params(parms, []string{"scope", "response_type", "client_id", "redirect_uri"}) // ref Rule 3
-	err4 := validate_sub_param(parms)                                                                   // ref Rule 4
+	err1 := validate_oauth_params(parms)           // ref Rule 1
+	err2 := validate_scope_param(parms)            // ref Rule 2
+	err3 := validate_req_params(parms, *op.client) // ref Rule 3
+	err4 := validate_sub_param(parms)              // ref Rule 4
 
 	// Check first part of validation
 	if len(err1.Error) != 0 {
@@ -85,39 +78,47 @@ func (op *OpenID) Authorize(parms Values) (AuthSuccessResp, AuthErrResp) {
 	}
 }
 
-func (op *OpenID) authz_code_flow(parms Values) (AuthSuccessResp, AuthErrResp) {
-	return AuthSuccessResp{}, AuthErrResp{}
-}
-func (op *OpenID) implizit_flow(parms Values) (AuthSuccessResp, AuthErrResp) {
-	return AuthSuccessResp{}, AuthErrResp{}
-}
-func (op *OpenID) hybrid_flow(parms Values) (AuthSuccessResp, AuthErrResp) {
-	return AuthSuccessResp{}, AuthErrResp{}
-}
-
 // /userinfo
 func (op *OpenID) UserInfo(tk jwt.Token) jwt.Token {
+	// TODO: Implement
 	return jwt.Token{}
 }
 
 // /revoke
 func (op *OpenID) Revoke(tk jwt.Token) jwt.Token {
+	// TODO: Implement
 	return jwt.Token{}
 }
 
 // /token
 func (op *OpenID) TokenEndpoint(tk jwt.Token) jwt.Token {
+	// TODO: Implement
 	return jwt.Token{}
 }
 
 // AddServer takes an mux and adds basic http endpoints for OpenID Connect
 func (op *OpenID) AddServer(mux *http.ServeMux) error {
-	mux.HandleFunc("/authorize", http_authorize)
-	mux.HandleFunc("/token", http_token)
-	mux.HandleFunc("/userinfo", http_userinfo)
-	mux.HandleFunc("/revoke", http_revoke)
+	api, err := newHttpAPI(op)
+	if err != nil {
+		utils.ELog(err)
+		return err
+	}
+
+	mux.HandleFunc("/authorize", api.http_authorize)
+	mux.HandleFunc("/token", api.http_token)
+	mux.HandleFunc("/userinfo", api.http_userinfo)
+	mux.HandleFunc("/revoke", api.http_revoke)
 	return nil
 }
 
-func (op *OpenID) AddClaimsource(ds Claimsource) {
+func (op *OpenID) SetClaimsource(src *Claimsource) {
+	op.claims = src
+}
+
+func (op *OpenID) SetAuthsource(src *Authsource) {
+	op.auth = src
+}
+
+func (op *OpenID) SetClientsource(src *Clientsource) {
+	op.client = src
 }
