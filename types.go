@@ -1,7 +1,9 @@
 package openid
 
 import (
+	"net/http"
 	"net/url"
+	"time"
 )
 
 /* START stolen from net/url, TODO: Find better method */
@@ -57,11 +59,12 @@ type AuthErrResp struct {
 }
 
 /*
- * Authsource and Claimsource are compatible with each together
+ * Authsource, Claimsource and Clientsource are compatible with each together
  */
 // Authsource implements the authenticating part
 type Authsource interface {
 	Auth(id string, params Values) AuthErrResp
+	IsAuthenticated(params, header Values) (string, error)
 	Revoke(id string)
 	Register(id string, params Values) error
 	Unregister(id string) error
@@ -82,4 +85,20 @@ type Clientsource interface {
 	GetApplType(id string) string
 	// returns "web", "native"
 	ValidateRedirectUri(id, uri string) bool
+}
+
+// EnduserIf is used for rendering enduser dialogs
+type EnduserIf interface {
+	// Q: Is user already authenticated/able to authN automaticaly?
+	//   Y: Return AuthState:AuthOk=true
+	//   N: Prompt for creds, set session
+	// The redirect will be handled outside
+	Authpage(w http.ResponseWriter, r *http.Request, params Values) AuthState
+}
+type AuthState struct {
+	AuthOk    bool
+	AuthAbort bool
+	Iss       string
+	Sub       string
+	AuthTime  time.Time
 }

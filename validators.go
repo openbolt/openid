@@ -11,14 +11,14 @@ import (
 
 // A-BNF common definitions. Ref OAuth 2.0 rfc6749#appendix-A
 const (
-	VSCHAR            = "[\x20-\x7E]"
-	NQCHAR            = "[\x21\x23-\x5B\x5D-\x7E]"
-	NQSCHAR           = "[\x20-\x21\x23-\x5B\x5D-\x7E]"
+	VSCHAR            = "[\\x20-\\x7E]"
+	NQCHAR            = "[\\x21\\x23-\\x5B\\x5D-\\x7E]"
+	NQSCHAR           = "[\\x20-\\x21\\x23-\\x5B\\x5D-\\x7E]"
 	UNICODECHARNOCRLF = "[\\x09\\x20-\\x7E\\x80-\\x{D7FF}\\x{E000}-\\x{FFFD}\\x{10000}-\\x{10FFFF}]"
 
-	ALPHA = "\x41-\x5A\x61-\x7A"
-	DIGIT = "\x30-\x39"
-	SP    = "\x20"
+	ALPHA = "\\x41-\\x5A\\x61-\\x7A"
+	DIGIT = "\\x30-\\x39"
+	SP    = "\\x20"
 
 	// response-name = 1*response-char
 	// response-char = "_" / DIGIT / ALPHA
@@ -222,6 +222,7 @@ func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 		ok = false
 	}
 
+	// Return
 	resp := AuthErrResp{}
 	if ok {
 		utils.EDebug(errors.New("returning ok"))

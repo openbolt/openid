@@ -11,20 +11,25 @@ import (
 
 type OpenID struct {
 	// Datasources
-	claims *Claimsource
-	auth   *Authsource
-	client *Clientsource
+	claims  Claimsource
+	auth    Authsource
+	client  Clientsource
+	enduser EnduserIf
+
+	// True, if server is fully started
+	serving bool
 
 	// Config... going on
 }
 
 // NewProvider returns an blank OpenID Provider instance
 func NewProvider() OpenID {
-	return OpenID{}
+	op := OpenID{}
+	op.serving = false
+	return op
 }
 
 // Serve starts the OpenID Provider
-// TODO: Only accept requests when this is called
 func (op *OpenID) Serve() error {
 	if op.claims == nil {
 		return errors.New("No claimsource defined")
@@ -35,6 +40,7 @@ func (op *OpenID) Serve() error {
 	if op.client == nil {
 		return errors.New("No clientsource defined")
 	}
+	op.serving = true
 
 	return nil
 }
@@ -42,12 +48,16 @@ func (op *OpenID) Serve() error {
 // Ref 3.1.2.1. Authentication Request
 // An Authentication Request is an OAuth 2.0 Authorization Request that requests
 // that the End-User be authenticated by the Authorization Server.
-func (op *OpenID) Authorize(parms Values) (AuthSuccessResp, AuthErrResp) {
+func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request, parms Values) (AuthSuccessResp, AuthErrResp) {
+	if !op.serving {
+		return AuthSuccessResp{}, AuthErrResp{}
+	}
+
 	// ref 3.1.2.2
-	err1 := validate_oauth_params(parms)           // ref Rule 1
-	err2 := validate_scope_param(parms)            // ref Rule 2
-	err3 := validate_req_params(parms, *op.client) // ref Rule 3
-	err4 := validate_sub_param(parms)              // ref Rule 4
+	err1 := validate_oauth_params(parms)          // ref Rule 1
+	err2 := validate_scope_param(parms)           // ref Rule 2
+	err3 := validate_req_params(parms, op.client) // ref Rule 3
+	err4 := validate_sub_param(parms)             // ref Rule 4
 
 	// Check first part of validation
 	if len(err1.Error) != 0 {
@@ -63,6 +73,12 @@ func (op *OpenID) Authorize(parms Values) (AuthSuccessResp, AuthErrResp) {
 		return AuthSuccessResp{}, err4
 	}
 
+	// Ref 3.1.2.3.  Authorization Server Authenticates End-User
+	state := op.enduser.Authpage(w, r, parms)
+	// BUG(djboris) TODO process state
+
+	// BUG(djboris) Check additional Request Values
+
 	// Run through flow
 	// ref 3
 	switch parms["response_type"][0] {
@@ -73,25 +89,37 @@ func (op *OpenID) Authorize(parms Values) (AuthSuccessResp, AuthErrResp) {
 	case "code id_token", "code token", "code id_token token":
 		return op.hybrid_flow(parms)
 	default:
-		// TODO: invalid_request response
-		return AuthSuccessResp{}, AuthErrResp{}
+		err := AuthErrResp{}
+		err.Error = "invalid_request"
+		err.ErrorDescription = "Invalid request sent"
+		err.State = parms.Get("state")
+		return AuthSuccessResp{}, err
 	}
 }
 
 // /userinfo
 func (op *OpenID) UserInfo(tk jwt.Token) jwt.Token {
+	if !op.serving {
+		return jwt.Token{}
+	}
 	// TODO: Implement
 	return jwt.Token{}
 }
 
 // /revoke
 func (op *OpenID) Revoke(tk jwt.Token) jwt.Token {
+	if !op.serving {
+		return jwt.Token{}
+	}
 	// TODO: Implement
 	return jwt.Token{}
 }
 
 // /token
 func (op *OpenID) TokenEndpoint(tk jwt.Token) jwt.Token {
+	if !op.serving {
+		return jwt.Token{}
+	}
 	// TODO: Implement
 	return jwt.Token{}
 }
@@ -111,14 +139,14 @@ func (op *OpenID) AddServer(mux *http.ServeMux) error {
 	return nil
 }
 
-func (op *OpenID) SetClaimsource(src *Claimsource) {
+func (op *OpenID) SetClaimsource(src Claimsource) {
 	op.claims = src
 }
 
-func (op *OpenID) SetAuthsource(src *Authsource) {
+func (op *OpenID) SetAuthsource(src Authsource) {
 	op.auth = src
 }
 
-func (op *OpenID) SetClientsource(src *Clientsource) {
+func (op *OpenID) SetClientsource(src Clientsource) {
 	op.client = src
 }

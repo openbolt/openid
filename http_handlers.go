@@ -1,6 +1,7 @@
 package openid
 
 import (
+	"encoding/json"
 	"net/http"
 )
 
@@ -38,8 +39,17 @@ func (api *httpAPI) http_authorize(w http.ResponseWriter, r *http.Request) {
 		parms = Values(r.PostForm)
 	}
 
-	api.srv.Authorize(parms)
-	// TODO: Response handling
+	resp, err := api.srv.Authorize(w, r, parms)
+
+	// BUG(djboris) Proper response handling
+	if len(err.Error) > 0 {
+		r, _ := json.Marshal(err)
+		w.Write(r)
+	} else {
+		r, _ := json.Marshal(resp)
+		w.Write(r)
+	}
+	// ENDBUG
 }
 
 // /token
