@@ -47,7 +47,8 @@ func (v Values) Del(key string) {
 // Ref 3.1.3.3.  Successful Token Response
 type AuthSuccessResp struct {
 	// Flag if this response is valid, MUST NOT be exported
-	ok bool
+	ok     bool
+	Params Values
 }
 
 // Ref 3.1.2.6.  Authentication Error Response
@@ -96,9 +97,11 @@ type EnduserIf interface {
 	Authpage(w http.ResponseWriter, r *http.Request, params Values) AuthState
 }
 type AuthState struct {
-	AuthOk    bool
-	AuthAbort bool
-	Iss       string
-	Sub       string
-	AuthTime  time.Time
+	AuthOk        bool
+	AuthAbort     bool
+	AuthFailed    bool
+	AuthPrompting bool
+	Iss           string
+	Sub           string
+	AuthTime      time.Time
 }

@@ -23,8 +23,8 @@ type OpenID struct {
 }
 
 // NewProvider returns an blank OpenID Provider instance
-func NewProvider() OpenID {
-	op := OpenID{}
+func NewProvider() *OpenID {
+	op := new(OpenID)
 	op.serving = false
 	return op
 }
@@ -32,69 +32,20 @@ func NewProvider() OpenID {
 // Serve starts the OpenID Provider
 func (op *OpenID) Serve() error {
 	if op.claims == nil {
-		return errors.New("No claimsource defined")
+		return errors.New("No Claimsource defined")
 	}
 	if op.auth == nil {
-		return errors.New("No authsource defined")
+		return errors.New("No Authsource defined")
 	}
 	if op.client == nil {
-		return errors.New("No clientsource defined")
+		return errors.New("No Clientsource defined")
+	}
+	if op.enduser == nil {
+		return errors.New("No EnduserIf defined")
 	}
 	op.serving = true
 
 	return nil
-}
-
-// Ref 3.1.2.1. Authentication Request
-// An Authentication Request is an OAuth 2.0 Authorization Request that requests
-// that the End-User be authenticated by the Authorization Server.
-func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request, parms Values) (AuthSuccessResp, AuthErrResp) {
-	if !op.serving {
-		return AuthSuccessResp{}, AuthErrResp{}
-	}
-
-	// ref 3.1.2.2
-	err1 := validate_oauth_params(parms)          // ref Rule 1
-	err2 := validate_scope_param(parms)           // ref Rule 2
-	err3 := validate_req_params(parms, op.client) // ref Rule 3
-	err4 := validate_sub_param(parms)             // ref Rule 4
-
-	// Check first part of validation
-	if len(err1.Error) != 0 {
-		return AuthSuccessResp{}, err1
-	}
-	if len(err2.Error) != 0 {
-		return AuthSuccessResp{}, err2
-	}
-	if len(err3.Error) != 0 {
-		return AuthSuccessResp{}, err3
-	}
-	if len(err4.Error) != 0 {
-		return AuthSuccessResp{}, err4
-	}
-
-	// Ref 3.1.2.3.  Authorization Server Authenticates End-User
-	state := op.enduser.Authpage(w, r, parms)
-	// BUG(djboris) TODO process state
-
-	// BUG(djboris) Check additional Request Values
-
-	// Run through flow
-	// ref 3
-	switch parms["response_type"][0] {
-	case "code":
-		return op.authz_code_flow(parms)
-	case "id_token", "id_token token":
-		return op.implizit_flow(parms)
-	case "code id_token", "code token", "code id_token token":
-		return op.hybrid_flow(parms)
-	default:
-		err := AuthErrResp{}
-		err.Error = "invalid_request"
-		err.ErrorDescription = "Invalid request sent"
-		err.State = parms.Get("state")
-		return AuthSuccessResp{}, err
-	}
 }
 
 // /userinfo
@@ -132,7 +83,7 @@ func (op *OpenID) AddServer(mux *http.ServeMux) error {
 		return err
 	}
 
-	mux.HandleFunc("/authorize", api.http_authorize)
+	mux.HandleFunc("/authorize", api.httpAuthorize)
 	mux.HandleFunc("/token", api.http_token)
 	mux.HandleFunc("/userinfo", api.http_userinfo)
 	mux.HandleFunc("/revoke", api.http_revoke)
@@ -149,4 +100,7 @@ func (op *OpenID) SetAuthsource(src Authsource) {
 
 func (op *OpenID) SetClientsource(src Clientsource) {
 	op.client = src
+}
+func (op *OpenID) SetEnduserIf(src EnduserIf) {
+	op.enduser = src
 }

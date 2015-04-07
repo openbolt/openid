@@ -3,6 +3,9 @@ package openid
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
+
+	"github.com/openbolt/openid/utils"
 )
 
 type httpAPI struct {
@@ -18,7 +21,7 @@ func newHttpAPI(srv *OpenID) (*httpAPI, error) {
 
 // /authorize
 // ref 3.1.2.1
-func (api *httpAPI) http_authorize(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 	// Return if Method not GET or POST
 	if r.Method != "GET" && r.Method != "POST" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -41,15 +44,42 @@ func (api *httpAPI) http_authorize(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := api.srv.Authorize(w, r, parms)
 
-	// BUG(djboris) Proper response handling
 	if len(err.Error) > 0 {
-		r, _ := json.Marshal(err)
-		w.Write(r)
-	} else {
+		// If redirect_uri is not valid, show error as JSON
+		u, e := url.Parse(parms.Get("redirect_uri"))
+		if e != nil || u.String() == "" {
+			utils.EDebug(e)
+			r, _ := json.Marshal(err)
+			w.Write(r)
+			return
+		}
+		// If query argument is not valid for redirect_uri
+		query, e := url.ParseQuery(u.RawQuery)
+		if e != nil || u.String() == "" {
+			utils.EDebug(e)
+			r, _ := json.Marshal(err)
+			w.Write(r)
+			return
+		}
+
+		// Add error to query
+		query.Add("error", err.Error)
+		query.Add("error_description", err.ErrorDescription)
+		if state := parms.Get("state"); state != "" {
+			query.Add("state", state)
+		}
+		u.RawQuery = query.Encode()
+
+		// Do 302 Redirect
+		http.Redirect(w, r, u.String(), http.StatusFound)
+	} else if resp.ok {
+		// BUG(djboris) Proper success response handling
 		r, _ := json.Marshal(resp)
 		w.Write(r)
+	} else {
+		// Simply return if nor success, nor error
+		return
 	}
-	// ENDBUG
 }
 
 // /token

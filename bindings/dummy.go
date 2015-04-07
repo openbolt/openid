@@ -1,6 +1,9 @@
 package bindings
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/openbolt/openid"
 )
 
@@ -57,9 +60,9 @@ func (ds DummySource) DeleteRef(id string) error {
 /*
  * Clientsource
  */
+// IsClient returns true if id begins with `clt`
 func (ds DummySource) IsClient(id string) bool {
-	// BUG(djboris) Implement
-	return true
+	return strings.HasPrefix(id, "clt")
 }
 func (ds DummySource) GetApplType(id string) string {
 	// BUG(djboris) Implement
@@ -68,4 +71,12 @@ func (ds DummySource) GetApplType(id string) string {
 func (ds DummySource) ValidateRedirectUri(id, uri string) bool {
 	// BUG(djboris) Implement
 	return true
+}
+
+/*
+ * EnduserIf
+ */
+func (ds *DummySource) Authpage(w http.ResponseWriter, r *http.Request, params openid.Values) openid.AuthState {
+	w.Write([]byte("demopage"))
+	return openid.AuthState{AuthPrompting: true}
 }

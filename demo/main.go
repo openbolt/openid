@@ -11,11 +11,13 @@ import (
 func main() {
 	op := openid.NewProvider()
 	src := bindings.DummySource{}
+	ifx := new(iface)
 
 	// Add datasources
 	op.SetAuthsource(src)
 	op.SetClaimsource(src)
 	op.SetClientsource(src)
+	op.SetEnduserIf(ifx)
 
 	// Configure http api
 	mux := http.NewServeMux()

@@ -34,7 +34,7 @@ const (
 
 	// BUG(djboris) Implement it according to rfc3986#appendix-A
 	// TODO: Do it right with BNF
-	rx_uri_reference = "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?"
+	rx_uri_reference = "^https?:"
 )
 
 var (
@@ -107,32 +107,35 @@ var (
 // to the OAuth 2.0 specification.
 // Ref rfc6749 appendix-A
 func validate_oauth_params(params Values) AuthErrResp {
-	test := func(parm string, re *regexp.Regexp) bool {
+	test := func(parm string, re *regexp.Regexp, cont *string) bool {
 		if params.Get(parm) != "" && !re.MatchString(params.Get(parm)) {
 			utils.EDebug(errors.New(parm + " malformed"))
+			*cont = *cont + parm + ";"
 			return false
 		} else {
 			return true
 		}
 	}
+
+	var errParm *string = new(string)
 	var ok bool = true
-	ok = ok && test("client_id", re_client_id)
-	ok = ok && test("client_secret", re_client_secret)
-	ok = ok && test("response_type", re_response_type)
-	ok = ok && test("scope", re_scope)
-	ok = ok && test("state", re_state)
-	ok = ok && test("redirect_uri", re_redirect_uri)
-	ok = ok && test("error", re_error)
-	ok = ok && test("error_description", re_error_description)
-	ok = ok && test("error_uri", re_error_uri)
-	ok = ok && test("grant_type", re_grant_type)
-	ok = ok && test("code", re_code)
-	ok = ok && test("access_token", re_access_token)
-	ok = ok && test("token_type", re_token_type)
-	ok = ok && test("expires_in", re_expires_in)
-	ok = ok && test("username", re_username)
-	ok = ok && test("password", re_password)
-	ok = ok && test("refresh_token", re_refresh_token)
+	ok = ok && test("client_id", re_client_id, errParm)
+	ok = ok && test("client_secret", re_client_secret, errParm)
+	ok = ok && test("response_type", re_response_type, errParm)
+	ok = ok && test("scope", re_scope, errParm)
+	ok = ok && test("state", re_state, errParm)
+	ok = ok && test("redirect_uri", re_redirect_uri, errParm)
+	ok = ok && test("error", re_error, errParm)
+	ok = ok && test("error_description", re_error_description, errParm)
+	ok = ok && test("error_uri", re_error_uri, errParm)
+	ok = ok && test("grant_type", re_grant_type, errParm)
+	ok = ok && test("code", re_code, errParm)
+	ok = ok && test("access_token", re_access_token, errParm)
+	ok = ok && test("token_type", re_token_type, errParm)
+	ok = ok && test("expires_in", re_expires_in, errParm)
+	ok = ok && test("username", re_username, errParm)
+	ok = ok && test("password", re_password, errParm)
+	ok = ok && test("refresh_token", re_refresh_token, errParm)
 
 	resp := AuthErrResp{}
 	if ok {
@@ -140,7 +143,7 @@ func validate_oauth_params(params Values) AuthErrResp {
 		return resp
 	} else {
 		resp.Error = "invalid_request"
-		resp.ErrorDescription = "One or more malformed request parameters"
+		resp.ErrorDescription = "One or more malformed request parameters: " + *errParm
 		resp.State = params.Get("state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
@@ -183,16 +186,25 @@ func validate_scope_param(params Values) AuthErrResp {
 //   For Implicit: + nonce
 func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 	var ok bool = true
-	var errs string = ""
+	var errs string
 
+	// Check flow
 	flow := getFlow(params.Get("response_type"))
 	if flow == "" {
-		utils.EDebug(errors.New("invalid response_type"))
+		s := "invalid response_type"
+		utils.EDebug(errors.New(s))
+		errs += s + ";"
 		ok = false
 	}
 
-	ok = ok && clt.IsClient(params.Get("client_id"))
+	// Check client_id
+	t := clt.IsClient(params.Get("client_id"))
+	if !t {
+		errs += "no client with this id;"
+	}
+	ok = ok && t
 
+	// Check redirect_uri
 	client_id := params.Get("client_id")
 	if flow == "implicit" {
 		// ...the Redirection URI MUST NOT use the http scheme unless
@@ -201,24 +213,30 @@ func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 		uri, err := url.Parse(params.Get("redirect_uri"))
 		if err != nil {
 			utils.EInfo(err)
+			errs += "failed to parse redirect_uri: " + err.Error() + ";"
 			ok = false
-			errs = "invalid_request_uri"
 		}
 		if uri.Scheme == "http" &&
 			(clt.GetApplType(client_id) != "native" || uri.Host != "localhost") {
-			utils.EDebug(errors.New("Not compatible redirect_uri"))
+			s := "Not compatible redirect_uri"
+			utils.EDebug(errors.New(s))
+			errs += s + ";"
 			ok = false
-			errs = "invalid_request_uri"
 		}
 
 	} else {
-
-		ok = ok && clt.ValidateRedirectUri(client_id, params.Get("redirect_uri"))
+		t := clt.ValidateRedirectUri(client_id, params.Get("redirect_uri"))
+		if !t {
+			errs += "redirect_uri validation failed;"
+		}
+		ok = ok && t
 	}
 
 	// For implicit: nonce is required
 	if flow == "implicit" && len(params.Get("nonce")) == 0 {
-		utils.EDebug(errors.New("nonce not present in implicit flow"))
+		s := "nonce not present in implicit flow"
+		utils.EDebug(errors.New(s))
+		errs += s + ";"
 		ok = false
 	}
 
@@ -228,12 +246,8 @@ func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 		utils.EDebug(errors.New("returning ok"))
 		return resp
 	} else {
-		if errs == "" {
-			resp.Error = "invalid_request"
-		} else {
-			resp.Error = errs
-		}
-		resp.ErrorDescription = "One or more not valid parameters"
+		resp.Error = "invalid_request"
+		resp.ErrorDescription = "One or more not valid parameters: " + errs
 		resp.State = params.Get("state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
@@ -261,6 +275,7 @@ func validate_sub_param(params Values) AuthErrResp {
 // "" will be returned
 func getFlow(field string) string {
 	// Returns according flow
+
 	// Ref 3
 	switch field {
 	case "code":
