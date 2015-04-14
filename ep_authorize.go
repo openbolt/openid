@@ -54,10 +54,13 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request, parms Values
 		w.Header().Set("Location", r.RequestURI)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else if state.AuthOk {
-		// Do nothing?
+		// Do really nothing?
 	}
 
 	// BUG(djboris) Check additional Request Values
+	var idTokenVals Values
+	idTokenVals.Set("nonce", parms.Get("nonce")) //TODO: Ignore if empty
+	// TODO: display, prompt, max_age, ui_locales, acr_values
 
 	// Run through flow
 	// ref 3

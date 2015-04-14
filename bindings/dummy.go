@@ -2,7 +2,9 @@ package bindings
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/openbolt/openid"
 )
@@ -77,6 +79,26 @@ func (ds DummySource) ValidateRedirectUri(id, uri string) bool {
  * EnduserIf
  */
 func (ds *DummySource) Authpage(w http.ResponseWriter, r *http.Request, params openid.Values) openid.AuthState {
-	w.Write([]byte("demopage"))
-	return openid.AuthState{AuthPrompting: true}
+	if params.Get("auth") == "ok" {
+		res := openid.AuthState{}
+		res.AuthOk = true
+		res.Iss = params.Get("auth_iss")
+		res.Sub = params.Get("auth_sub")
+		res.AuthTime = time.Now()
+		return res
+	} else if params.Get("auth") == "fail" {
+		return openid.AuthState{AuthFailed: true}
+	} else if params.Get("auth") == "abort" {
+		return openid.AuthState{AuthAbort: true}
+	} else {
+		w.Write([]byte("<a href=\""))
+		params.Add("auth", "ok")
+		params.Add("auth_iss", "iss_bla")
+		params.Add("auth_sub", "sub_bla")
+		w.Write([]byte(url.Values(params).Encode()))
+		w.Write([]byte("\">Login</a>"))
+		w.Write([]byte("Hint: " + params.Get("login_hint")))
+
+		return openid.AuthState{AuthPrompting: true}
+	}
 }

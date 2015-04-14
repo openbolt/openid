@@ -89,6 +89,9 @@ type Clientsource interface {
 }
 
 // EnduserIf is used for rendering enduser dialogs
+// Authpage must comply with `3.1.2.1.  Authentication Request`
+// In short, it should implement the following:
+//   - Claims: display, prompt, max_age, ui_locales, id_token_hint, login_hint, acr_values
 type EnduserIf interface {
 	// Q: Is user already authenticated/able to authN automaticaly?
 	//   Y: Return AuthState:AuthOk=true

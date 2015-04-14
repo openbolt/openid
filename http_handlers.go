@@ -44,6 +44,7 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := api.srv.Authorize(w, r, parms)
 
+	// BUG return according to response_mode [fragment, query]
 	if len(err.Error) > 0 {
 		// If redirect_uri is not valid, show error as JSON
 		u, e := url.Parse(parms.Get("redirect_uri"))

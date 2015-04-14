@@ -75,8 +75,7 @@ func sGet(path string) getResp {
 	return r
 }
 
-// Test Authorization
-func TestHttpAuthorize_negative(t *testing.T) {
+func TestHttpAuthorize_invalid_request(t *testing.T) {
 	redirect_url := ts.URL + "/backlink"
 
 	resp := sGet("/authorize")
@@ -84,23 +83,41 @@ func TestHttpAuthorize_negative(t *testing.T) {
 		t.Error("Wrong response when request with no params")
 	}
 
-	t.Log("Next")
 	resp = sGet("/authorize?scope=openid&redirect_uri=" + redirect_url)
 	if resp.Url.Path != "/backlink" {
-		t.Error("Redirect on error not working")
+		t.Error("Redirect on valid url not working")
+	}
+
+	resp = sGet("/authorize?scope=openid&redirect_uri=invalidurl")
+	if resp.Status == 404 {
+		t.Error("Redirect on INvalid url should not work")
 	}
 }
 
-func TestHttpAuthorize_positive(t *testing.T) {
+func TestHttpAuthorize_login(t *testing.T) {
 	redirect_url := ts.URL + "/backlink"
 
-	resp := sGet("/authorize?" +
-		"scope=openid" +
+	resp := sGet("/authorize" +
+		"?scope=openid" +
+		"&client_id=cltTest1" +
+		"&login_hint=myHint" +
+		"&redirect_uri=" + redirect_url +
+		"&response_type=code")
+	if !strings.Contains(resp.Body, "myHint") {
+		t.Error("Login hint not displaying")
+	}
+}
+
+func TestHttpAuthorize_redirections(t *testing.T) {
+	redirect_url := ts.URL + "/backlink"
+
+	t.Log("Testing redirect to login form...")
+	resp := sGet("/authorize" +
+		"?scope=openid" +
 		"&client_id=cltTest1" +
 		"&redirect_uri=" + redirect_url +
 		"&response_type=code")
-	t.Error(resp)
-	if !strings.Contains(resp.Url.String(), "invalid_request") {
-		t.Error("")
+	if !strings.Contains(resp.Body, ">Login<") {
+		t.Error("Not redirected to login form")
 	}
 }

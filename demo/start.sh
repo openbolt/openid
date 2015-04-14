@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go run bindata.go demo_if.go main.go
+go run bindata.go main.go
