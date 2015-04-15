@@ -30,10 +30,10 @@ func TestMain(m *testing.M) {
 
 	// Set bindings
 	src := new(bindings.DummySource)
-	op.SetAuthsource(src)
-	op.SetClaimsource(src)
-	op.SetClientsource(src)
-	op.SetEnduserIf(src)
+	op.Auth = src
+	op.Claim = src
+	op.Client = src
+	op.EnduserIf = src
 
 	// Set TLS Server
 	mux := http.NewServeMux()

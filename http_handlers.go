@@ -90,7 +90,3 @@ func (api *httpAPI) http_token(w http.ResponseWriter, r *http.Request) {
 // /userinfo
 func (api *httpAPI) http_userinfo(w http.ResponseWriter, r *http.Request) {
 }
-
-// /revoke
-func (api *httpAPI) http_revoke(w http.ResponseWriter, r *http.Request) {
-}

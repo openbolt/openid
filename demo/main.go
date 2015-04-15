@@ -13,10 +13,10 @@ func main() {
 	src := &bindings.DummySource{}
 
 	// Add datasources
-	op.SetAuthsource(src)
-	op.SetClaimsource(src)
-	op.SetClientsource(src)
-	op.SetEnduserIf(src)
+	op.Auth = src
+	op.Claims = src
+	op.Client = src
+	op.Enduser = src
 
 	// Configure http api
 	mux := http.NewServeMux()

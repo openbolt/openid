@@ -11,10 +11,10 @@ import (
 
 type OpenID struct {
 	// Datasources
-	claims  Claimsource
-	auth    Authsource
-	client  Clientsource
-	enduser EnduserIf
+	Claims  Claimsource
+	Auth    Authsource
+	Client  Clientsource
+	Enduser EnduserIf
 
 	// True, if server is fully started
 	serving bool
@@ -31,16 +31,16 @@ func NewProvider() *OpenID {
 
 // Serve starts the OpenID Provider
 func (op *OpenID) Serve() error {
-	if op.claims == nil {
+	if op.Claims == nil {
 		return errors.New("No Claimsource defined")
 	}
-	if op.auth == nil {
+	if op.Auth == nil {
 		return errors.New("No Authsource defined")
 	}
-	if op.client == nil {
+	if op.Client == nil {
 		return errors.New("No Clientsource defined")
 	}
-	if op.enduser == nil {
+	if op.Enduser == nil {
 		return errors.New("No EnduserIf defined")
 	}
 	op.serving = true
@@ -50,15 +50,6 @@ func (op *OpenID) Serve() error {
 
 // /userinfo
 func (op *OpenID) UserInfo(tk jwt.Token) jwt.Token {
-	if !op.serving {
-		return jwt.Token{}
-	}
-	// TODO: Implement
-	return jwt.Token{}
-}
-
-// /revoke
-func (op *OpenID) Revoke(tk jwt.Token) jwt.Token {
 	if !op.serving {
 		return jwt.Token{}
 	}
@@ -86,21 +77,5 @@ func (op *OpenID) AddServer(mux *http.ServeMux) error {
 	mux.HandleFunc("/authorize", api.httpAuthorize)
 	mux.HandleFunc("/token", api.http_token)
 	mux.HandleFunc("/userinfo", api.http_userinfo)
-	mux.HandleFunc("/revoke", api.http_revoke)
 	return nil
-}
-
-func (op *OpenID) SetClaimsource(src Claimsource) {
-	op.claims = src
-}
-
-func (op *OpenID) SetAuthsource(src Authsource) {
-	op.auth = src
-}
-
-func (op *OpenID) SetClientsource(src Clientsource) {
-	op.client = src
-}
-func (op *OpenID) SetEnduserIf(src EnduserIf) {
-	op.enduser = src
 }
