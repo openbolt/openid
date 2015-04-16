@@ -1,6 +1,7 @@
 package bindings
 
 import (
+	"html/template"
 	"net/http"
 	"net/url"
 	"strings"
@@ -9,33 +10,12 @@ import (
 	"github.com/openbolt/openid"
 )
 
-// DummySource defines an empty Authsource, Claimsource and Clientsource
+//go:generate go-bindata -o bindata.go -pkg bindings assets/
+
+// DummySource defines an empty Claimsource and Clientsource
 // which stores its data in RAM.
 // This can be used for testcases or demo applications
 type DummySource struct {
-}
-
-/*
- *Authsource
- */
-// Auth
-func (ds DummySource) Auth(id string, params openid.Values) openid.AuthErrResp {
-	// BUG(djboris) Implement
-	return openid.AuthErrResp{}
-}
-func (ds DummySource) Revoke(id string) {
-	// BUG(djboris) Implement
-}
-func (ds DummySource) Register(id string, params openid.Values) error {
-	// BUG(djboris) Implement
-	return nil
-}
-func (ds DummySource) Unregister(id string) error {
-	// BUG(djboris) Implement
-	return nil
-}
-func (ds DummySource) IsAuthenticated(params, header openid.Values) (string, error) {
-	return "", nil
 }
 
 /*
@@ -46,18 +26,6 @@ func (ds DummySource) Get(id, claim, def string) (string, bool) {
 	// BUG(djboris) Implement
 	return "foo", true
 }
-func (ds DummySource) Set(id, claim, value string) error {
-	// BUG(djboris) Implement
-	return nil
-}
-func (ds DummySource) Delete(id, claim string) error {
-	// BUG(djboris) Implement
-	return nil
-}
-func (ds DummySource) DeleteRef(id string) error {
-	// BUG(djboris) Implement
-	return nil
-}
 
 /*
  * Clientsource
@@ -66,39 +34,102 @@ func (ds DummySource) DeleteRef(id string) error {
 func (ds DummySource) IsClient(id string) bool {
 	return strings.HasPrefix(id, "clt")
 }
+func (ds DummySource) GetClientType(id string) string {
+	// BUG(djboris) Implement
+	return "confidential"
+}
 func (ds DummySource) GetApplType(id string) string {
 	// BUG(djboris) Implement
 	return "web"
 }
+
+// Returns true if host equivalent to id[3::]. Example: cltlocalhost => localhost
 func (ds DummySource) ValidateRedirectUri(id, uri string) bool {
 	// BUG(djboris) Implement
-	return true
+	u, err := url.Parse(uri)
+	if err != nil || len(id) < 3 {
+		return false
+	}
+	return u.Host == id[3:len(id)]
 }
 
 /*
  * EnduserIf
  */
-func (ds *DummySource) Authpage(w http.ResponseWriter, r *http.Request, params openid.Values) openid.AuthState {
-	if params.Get("auth") == "ok" {
-		res := openid.AuthState{}
-		res.AuthOk = true
-		res.Iss = params.Get("auth_iss")
-		res.Sub = params.Get("auth_sub")
-		res.AuthTime = time.Now()
-		return res
-	} else if params.Get("auth") == "fail" {
-		return openid.AuthState{AuthFailed: true}
-	} else if params.Get("auth") == "abort" {
-		return openid.AuthState{AuthAbort: true}
-	} else {
-		w.Write([]byte("<a href=\""))
-		params.Add("auth", "ok")
-		params.Add("auth_iss", "iss_bla")
-		params.Add("auth_sub", "sub_bla")
-		w.Write([]byte(url.Values(params).Encode()))
-		w.Write([]byte("\">Login</a>"))
-		w.Write([]byte("Hint: " + params.Get("login_hint")))
+func (ds *DummySource) Authpage(w http.ResponseWriter, r *http.Request) openid.AuthState {
+	var warn string
 
-		return openid.AuthState{AuthPrompting: true}
+	if openid.GetParam(r, "_login") != "" {
+		sub, iss := dummyAuth(openid.GetParam(r, "_username"), openid.GetParam(r, "_password"))
+		if sub == "" {
+			warn = "Wrong credentials"
+			// Continues to loginpage...
+		} else {
+			res := openid.AuthState{}
+			res.AuthOk = true
+			res.Sub = sub
+			res.Iss = iss
+			res.AuthTime = time.Now()
+			return res
+		}
+
+	} else if openid.GetParam(r, "_fail") != "" {
+		return openid.AuthState{AuthFailed: true}
+	} else if openid.GetParam(r, "_abort") != "" {
+		return openid.AuthState{AuthAbort: true}
+	}
+
+	//
+	// Display login form
+	//
+	tpl, _ := Asset("assets/pwlogin.html")
+	t := template.New("pwauth.html")
+	t.Parse(string(tpl))
+
+	// Prepare form/URI values
+	var query url.Values
+	if r.Method == "GET" {
+		query = r.URL.Query()
+	} else {
+		r.ParseForm()
+		query = r.PostForm
+	}
+
+	// Prepare struct for template renderer
+	vals := make(map[string]string)
+	for k, v := range query {
+		if k[0] != '_' {
+			vals[k] = v[0]
+		}
+	}
+	x := struct {
+		Method  string
+		Baseurl string
+		Values  map[string]string
+		Warn    string
+	}{
+		"post", // Use post instead of r.Method (c&p security)
+		r.URL.Path,
+		vals,
+		warn,
+	}
+
+	// Execute
+	t.Execute(w, x)
+	return openid.AuthState{AuthPrompting: true}
+}
+
+// Username: sub dot iss (Example: djboris.myIssuer)
+// PW: must be not empty
+func dummyAuth(user, pw string) (sub, iss string) {
+	if user == "" || pw == "" {
+		return "", ""
+	}
+
+	v := strings.Split(user, ".")
+	if len(v) < 2 {
+		return "", ""
+	} else {
+		return v[0], v[1]
 	}
 }

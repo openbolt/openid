@@ -29,64 +29,61 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract paramters
-	var parms Values
+	resp, err := api.srv.Authorize(w, r)
 
-	if r.Method == "GET" {
-		// MUST URI Query String Serialization
-		parms = Values(r.URL.Query())
-
-	} else if r.Method == "POST" {
-		// MUST Form Serialization
-		r.ParseForm()
-		parms = Values(r.PostForm)
+	// Get default response_type for flow and override it if another is set
+	var response_type string = "fragment"
+	if getFlow(GetParam(r, "code")) == "authorization_code" {
+		response_type = "query"
+	}
+	if tmp := GetParam(r, "response_type"); tmp != "" {
+		response_type = tmp
 	}
 
-	resp, err := api.srv.Authorize(w, r, parms)
-
-	// BUG return according to response_mode [fragment, query]
-	if len(err.Error) > 0 {
+	if err.Error != "" {
 		// If redirect_uri is not valid, show error as JSON
-		u, e := url.Parse(parms.Get("redirect_uri"))
-		if e != nil || u.String() == "" {
+		redirect_uri := GetParam(r, "redirect_uri")
+		client_id := GetParam(r, "client_id")
+		flow := GetParam(r, "code")
+		t := checkRedirectUri(redirect_uri, client_id, flow, api.srv.Clientsrc)
+		u, e := url.Parse(redirect_uri)
+		if e != nil || !t {
 			utils.EDebug(e)
 			r, _ := json.Marshal(err)
 			w.Write(r)
 			return
 		}
-		// If query argument is not valid for redirect_uri
-		query, e := url.ParseQuery(u.RawQuery)
-		if e != nil || u.String() == "" {
-			utils.EDebug(e)
-			r, _ := json.Marshal(err)
-			w.Write(r)
-			return
+
+		/*
+		 * Add error to query or fragment
+		 */
+		var query url.Values
+		if response_type == "query" {
+			query, _ = url.ParseQuery(u.RawQuery)
+		} else {
+			query, _ = url.ParseQuery(u.Fragment)
 		}
 
 		// Add error to query
 		query.Add("error", err.Error)
 		query.Add("error_description", err.ErrorDescription)
-		if state := parms.Get("state"); state != "" {
+		if state := GetParam(r, "state"); state != "" {
 			query.Add("state", state)
 		}
-		u.RawQuery = query.Encode()
 
-		// Do 302 Redirect
+		if response_type == "query" {
+			u.RawQuery = query.Encode()
+		} else {
+			u.Fragment = query.Encode()
+		}
+
+		/*
+		 * Finish, Do 302 Redirect
+		 */
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	} else if resp.ok {
 		// BUG(djboris) Proper success response handling
 		r, _ := json.Marshal(resp)
 		w.Write(r)
-	} else {
-		// Simply return if nor success, nor error
-		return
 	}
-}
-
-// /token
-func (api *httpAPI) http_token(w http.ResponseWriter, r *http.Request) {
-}
-
-// /userinfo
-func (api *httpAPI) http_userinfo(w http.ResponseWriter, r *http.Request) {
 }

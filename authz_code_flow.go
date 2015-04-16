@@ -1,5 +1,7 @@
 package openid
 
+import "net/http"
+
 /*
  * Ref 3.1.  Authentication using the Authorization Code Flow
  * The Authorization Code Flow returns an Authorization Code to the Client,
@@ -24,7 +26,7 @@ package openid
  *       Subject Identifier.
  */
 
-func (op *OpenID) authz_code_flow(parms Values) (AuthSuccessResp, AuthErrResp) {
+func (op *OpenID) authz_code_flow(r *http.Request) (AuthSuccessResp, AuthErrResp) {
 	// BUG(djboris) implement
-	return AuthSuccessResp{}, AuthErrResp{}
+	return AuthSuccessResp{ok: true}, AuthErrResp{}
 }

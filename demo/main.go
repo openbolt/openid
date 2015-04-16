@@ -13,9 +13,8 @@ func main() {
 	src := &bindings.DummySource{}
 
 	// Add datasources
-	op.Auth = src
-	op.Claims = src
-	op.Client = src
+	op.Claimsrc = src
+	op.Clientsrc = src
 	op.Enduser = src
 
 	// Configure http api

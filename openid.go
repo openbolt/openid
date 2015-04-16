@@ -5,16 +5,14 @@ import (
 	"errors"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/openbolt/openid/utils"
 )
 
 type OpenID struct {
 	// Datasources
-	Claims  Claimsource
-	Auth    Authsource
-	Client  Clientsource
-	Enduser EnduserIf
+	Claimsrc  Claimsource
+	Clientsrc Clientsource
+	Enduser   EnduserIf
 
 	// True, if server is fully started
 	serving bool
@@ -31,13 +29,10 @@ func NewProvider() *OpenID {
 
 // Serve starts the OpenID Provider
 func (op *OpenID) Serve() error {
-	if op.Claims == nil {
+	if op.Claimsrc == nil {
 		return errors.New("No Claimsource defined")
 	}
-	if op.Auth == nil {
-		return errors.New("No Authsource defined")
-	}
-	if op.Client == nil {
+	if op.Clientsrc == nil {
 		return errors.New("No Clientsource defined")
 	}
 	if op.Enduser == nil {
@@ -46,24 +41,6 @@ func (op *OpenID) Serve() error {
 	op.serving = true
 
 	return nil
-}
-
-// /userinfo
-func (op *OpenID) UserInfo(tk jwt.Token) jwt.Token {
-	if !op.serving {
-		return jwt.Token{}
-	}
-	// TODO: Implement
-	return jwt.Token{}
-}
-
-// /token
-func (op *OpenID) TokenEndpoint(tk jwt.Token) jwt.Token {
-	if !op.serving {
-		return jwt.Token{}
-	}
-	// TODO: Implement
-	return jwt.Token{}
 }
 
 // AddServer takes an mux and adds basic http endpoints for OpenID Connect
@@ -75,7 +52,5 @@ func (op *OpenID) AddServer(mux *http.ServeMux) error {
 	}
 
 	mux.HandleFunc("/authorize", api.httpAuthorize)
-	mux.HandleFunc("/token", api.http_token)
-	mux.HandleFunc("/userinfo", api.http_userinfo)
 	return nil
 }

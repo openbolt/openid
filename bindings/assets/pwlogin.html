@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Login with OpenID</title>
+	</head>
+	<body>
+		<strong style="color:red; ">{{ .Warn }}</strong>
+		<form action="{{ .Baseurl }}" method="{{ .Method }}">
+			<!-- keep request parameters -->
+			{{ range $key, $value := .Values }}
+			<input type="hidden" name="{{ $key }}" value="{{ $value }}" />
+			{{ end }}
+
+			<table>
+				<tr>
+					<td>User</td>
+					<td><input type="text" name="_username"/></td>
+				</tr>
+				<tr>
+					<td>Password</td>
+					<td><input type="password" name="_password"/></td>
+				</tr>
+				<tr>
+					<td><input type="submit" name="_abort" value="Abort"/></td>
+					<td><input type="submit" name="_login" value="Login"/></td>
+				</tr>
+			</table>
+		</form>
+	</body>
+</html>

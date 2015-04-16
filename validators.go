@@ -2,6 +2,7 @@ package openid
 
 import (
 	"errors"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -32,9 +33,8 @@ const (
 	// name-char  = "-" / "." / "_" / DIGIT / ALPHA
 	rx_type_name = "[\\-\\._" + DIGIT + ALPHA + "]+"
 
-	// BUG(djboris) Implement it according to rfc3986#appendix-A
-	// TODO: Do it right with BNF
-	rx_uri_reference = "^https?:"
+	// Regex from rfc3986#appendix-B
+	rx_uri_reference = "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?"
 )
 
 var (
@@ -106,9 +106,9 @@ var (
 // The Authorization Server MUST validate all the OAuth 2.0 parameters according
 // to the OAuth 2.0 specification.
 // Ref rfc6749 appendix-A
-func validate_oauth_params(params Values) AuthErrResp {
+func validate_oauth_params(r *http.Request) AuthErrResp {
 	test := func(parm string, re *regexp.Regexp, cont *string) bool {
-		if params.Get(parm) != "" && !re.MatchString(params.Get(parm)) {
+		if GetParam(r, parm) != "" && !re.MatchString(GetParam(r, parm)) {
 			utils.EDebug(errors.New(parm + " malformed"))
 			*cont = *cont + parm + ";"
 			return false
@@ -144,7 +144,7 @@ func validate_oauth_params(params Values) AuthErrResp {
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "One or more malformed request parameters: " + *errParm
-		resp.State = params.Get("state")
+		resp.State = GetParam(r, "state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
 		return resp
@@ -153,8 +153,8 @@ func validate_oauth_params(params Values) AuthErrResp {
 
 // Rule 2:
 // Verify that a scope parameter is present and contains the openid scope value.
-func validate_scope_param(params Values) AuthErrResp {
-	args := strings.Split(params.Get("scope"), " ")
+func validate_scope_param(r *http.Request) AuthErrResp {
+	args := strings.Split(GetParam(r, "scope"), " ")
 
 	// Check if openid value in scope
 	var ok bool = false
@@ -171,7 +171,7 @@ func validate_scope_param(params Values) AuthErrResp {
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "Scope doesn't contain openid"
-		resp.State = params.Get("state")
+		resp.State = GetParam(r, "state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
 		return resp
@@ -184,12 +184,33 @@ func validate_scope_param(params Values) AuthErrResp {
 //   Scope  will not be tested as it is already done in validate_scope_param
 //   Required params: scope, response_type, client_id, redirect_uri
 //   For Implicit: + nonce
-func validate_req_params(params Values, clt Clientsource) AuthErrResp {
+func validate_req_params(r *http.Request, clt Clientsource) AuthErrResp {
 	var ok bool = true
 	var errs string
 
-	// Check flow
-	flow := getFlow(params.Get("response_type"))
+	// Check existence of parameters
+	if GetParam(r, "scope") == "" {
+		errs += "scope missing"
+		ok = false
+	}
+	if GetParam(r, "response_type") == "" {
+		errs += "response_type missing"
+		ok = false
+	}
+	if GetParam(r, "client_id") == "" {
+		errs += "client_id missing"
+		ok = false
+	}
+	if GetParam(r, "redirect_uri") == "" {
+		errs += "redirect_uri missing"
+		ok = false
+	}
+
+	// response_type
+	// OAuth 2.0 Response Type value that determines the authorization
+	// processing flow to be used, including what parameters are returned
+	// from the endpoints used.
+	flow := getFlow(GetParam(r, "response_type"))
 	if flow == "" {
 		s := "invalid response_type"
 		utils.EDebug(errors.New(s))
@@ -197,43 +218,38 @@ func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 		ok = false
 	}
 
-	// Check client_id
-	t := clt.IsClient(params.Get("client_id"))
+	// client_id
+	// OAuth 2.0 Client Identifier valid at the Authorization Server.
+	t := clt.IsClient(GetParam(r, "client_id"))
 	if !t {
 		errs += "no client with this id;"
 	}
 	ok = ok && t
 
-	// Check redirect_uri
-	client_id := params.Get("client_id")
-	if flow == "implicit" {
-		// ...the Redirection URI MUST NOT use the http scheme unless
-		// the Client is a native application, in which case it
-		// MAY use the http: scheme with localhost as the hostname.
-		uri, err := url.Parse(params.Get("redirect_uri"))
-		if err != nil {
-			utils.EInfo(err)
-			errs += "failed to parse redirect_uri: " + err.Error() + ";"
-			ok = false
-		}
-		if uri.Scheme == "http" &&
-			(clt.GetApplType(client_id) != "native" || uri.Host != "localhost") {
-			s := "Not compatible redirect_uri"
-			utils.EDebug(errors.New(s))
-			errs += s + ";"
-			ok = false
-		}
-
-	} else {
-		t := clt.ValidateRedirectUri(client_id, params.Get("redirect_uri"))
-		if !t {
-			errs += "redirect_uri validation failed;"
-		}
-		ok = ok && t
+	// redirect_uri
+	// This URI MUST exactly match one of the Redirection URI values for the
+	// Client pre-registered at the OpenID Provider, with the matching
+	// performed as described in Section 6.2.1 of [RFC3986] (Simple String Comparison).
+	// When using this flow, the Redirection URI SHOULD use the https scheme;
+	// however, it MAY use the http scheme, provided that the
+	// Client Type is confidential, as defined in Section 2.1 of OAuth 2.0,
+	// and provided the OP allows the use of http Redirection URIs in this case.
+	// The Redirection URI MAY use an alternate scheme, such as one that is
+	// intended to identify a callback into a native application.
+	client_id := GetParam(r, "client_id")
+	redirect_uri := GetParam(r, "redirect_uri")
+	t = checkRedirectUri(redirect_uri, client_id, flow, clt)
+	if !t {
+		errs += "invalid or not allowed redirect_uri;"
 	}
+	ok = ok && t
 
-	// For implicit: nonce is required
-	if flow == "implicit" && len(params.Get("nonce")) == 0 {
+	// nonce (required only for implicit flow)
+	// String value used to associate a Client session with an ID Token,
+	// and to mitigate replay attacks. The value is passed through unmodified
+	// from the Authentication Request to the ID Token. Sufficient entropy
+	// MUST be present in the nonce values used to prevent attackers from guessing values
+	if flow == "implicit" && len(GetParam(r, "nonce")) == 0 {
 		s := "nonce not present in implicit flow"
 		utils.EDebug(errors.New(s))
 		errs += s + ";"
@@ -248,7 +264,7 @@ func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "One or more not valid parameters: " + errs
-		resp.State = params.Get("state")
+		resp.State = GetParam(r, "state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
 		return resp
@@ -265,26 +281,35 @@ func validate_req_params(params Values, clt Clientsource) AuthErrResp {
 // Authorization Server. Such a request can be made either using an
 // id_token_hint parameter or by requesting a specific Claim Value as described
 // in Section 5.5.1, if the claims parameter is supported by the implementation.
-func validate_sub_param(params Values) AuthErrResp {
+func validate_sub_param(r *http.Request) AuthErrResp {
 	// BUG(djboris) Implement
 	// This should be called after auth
 	return AuthErrResp{}
 }
 
-// getFlow returns authorization_code, implicit or hybrid. If any error occours,
-// "" will be returned
-func getFlow(field string) string {
-	// Returns according flow
+// checkRedirectUri validates an redirect_uri according to flow type
+func checkRedirectUri(redirect_uri, client_id, flow string, clt Clientsource) bool {
+	if flow == "implicit" {
+		// ...the Redirection URI MUST NOT use the http scheme unless
+		// the Client is a native application, in which case it
+		// MAY use the http: scheme with localhost as the hostname.
+		uri, err := url.Parse(redirect_uri)
+		if err != nil {
+			utils.EInfo(err)
+			return false
+		}
+		if uri.Scheme == "http" &&
+			(clt.GetApplType(client_id) != "native" || uri.Host != "localhost") {
+			utils.EDebug(errors.New("Not compatible redirect_uri"))
+			return false
+		}
+		return true
 
-	// Ref 3
-	switch field {
-	case "code":
-		return "authorization_code"
-	case "id_token", "id_token token":
-		return "implicit"
-	case "code id_token", "code token", "code id_token token":
-		return "hybrid"
-	default:
-		return ""
+	} else {
+		if !clt.ValidateRedirectUri(client_id, redirect_uri) {
+			utils.EDebug(errors.New("Client hasn't registered this redirect_uri"))
+			return false
+		}
+		return true
 	}
 }
