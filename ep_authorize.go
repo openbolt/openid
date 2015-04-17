@@ -14,7 +14,6 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	err1 := validate_oauth_params(r)             // ref Rule 1
 	err2 := validate_scope_param(r)              // ref Rule 2
 	err3 := validate_req_params(r, op.Clientsrc) // ref Rule 3
-	err4 := validate_sub_param(r)                // ref Rule 4
 
 	// Check first part of validation
 	if len(err1.Error) != 0 {
@@ -25,9 +24,6 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	}
 	if len(err3.Error) != 0 {
 		return AuthSuccessResp{}, err3
-	}
-	if len(err4.Error) != 0 {
-		return AuthSuccessResp{}, err4
 	}
 
 	// Ref 3.1.2.3.  Authorization Server Authenticates End-User
@@ -58,7 +54,10 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	}
 
 	// BUG(djboris) Check additional Request Values
-	// TODO: validate_sub_param
+	err4 := validate_sub_param(r, state.Sub) // ref Rule 4
+	if len(err4.Error) != 0 {
+		return AuthSuccessResp{}, err4
+	}
 
 	// var idTokenVals Values
 	//idTokenVals.Set("nonce", GetParam(r, "nonce")) //TODO: Ignore if empty
@@ -66,17 +65,17 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 
 	// Run through flow
 	// ref 3
-	switch GetParam(r, "response_type") {
-	case "code":
-		return op.authz_code_flow(r)
-	case "id_token", "id_token token":
-		return op.implizit_flow(r)
-	case "code id_token", "code token", "code id_token token":
-		return op.hybrid_flow(r)
+	switch getFlow(GetParam(r, "response_type")) {
+	case "authorization_code":
+		return op.authz_code_flow(r, state)
+	case "implicit":
+		return op.implicit_flow(r, state)
+	case "hybrid":
+		return op.hybrid_flow(r, state)
 	default:
 		err := AuthErrResp{}
 		err.Error = "invalid_request"
-		err.ErrorDescription = "Invalid request sent"
+		err.ErrorDescription = "Invalid `code` request sent"
 		err.State = GetParam(r, "state")
 		return AuthSuccessResp{}, err
 	}

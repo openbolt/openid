@@ -9,16 +9,17 @@ import (
 // Ref 3.1.3.3.  Successful Token Response
 type AuthSuccessResp struct {
 	// Flag if this response is valid, MUST NOT be exported
-	ok bool
-	//Params Values
+	ok    bool   `url:"-"`
+	Code  string `url:"code,omitempty"`
+	State string `url:"state,omitempty"`
 }
 
 // Ref 3.1.2.6.  Authentication Error Response
 type AuthErrResp struct {
-	Error            string `json:"error"`
-	ErrorDescription string `json:"error_description,omitempty"`
-	ErrorUri         string `json:"error_uri,omitempty"`
-	State            string `json:"state,omitempty"`
+	Error            string `url:"error"`
+	ErrorDescription string `url:"error_description,omitempty"`
+	ErrorUri         string `url:"error_uri,omitempty"`
+	State            string `url:"state,omitempty"`
 }
 
 /*

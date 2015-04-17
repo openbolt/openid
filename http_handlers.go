@@ -31,13 +31,13 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := api.srv.Authorize(w, r)
 
-	// Get default response_type for flow and override it if another is set
-	var response_type string = "fragment"
+	// Get default response_mode for flow and override it if another is set
+	var response_mode string = "fragment"
 	if getFlow(GetParam(r, "code")) == "authorization_code" {
-		response_type = "query"
+		response_mode = "query"
 	}
 	if tmp := GetParam(r, "response_type"); tmp != "" {
-		response_type = tmp
+		response_mode = tmp
 	}
 
 	if err.Error != "" {
@@ -57,24 +57,13 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 		/*
 		 * Add error to query or fragment
 		 */
-		var query url.Values
-		if response_type == "query" {
-			query, _ = url.ParseQuery(u.RawQuery)
-		} else {
-			query, _ = url.ParseQuery(u.Fragment)
-		}
-
-		// Add error to query
-		query.Add("error", err.Error)
-		query.Add("error_description", err.ErrorDescription)
-		if state := GetParam(r, "state"); state != "" {
-			query.Add("state", state)
-		}
-
-		if response_type == "query" {
-			u.RawQuery = query.Encode()
-		} else {
-			u.Fragment = query.Encode()
+		err.State = GetParam(r, "state")
+		*u, e = serializeResponse(*u, response_mode, err)
+		if e != nil {
+			utils.EDebug(e)
+			r, _ := json.Marshal(err)
+			w.Write(r)
+			return
 		}
 
 		/*
@@ -82,8 +71,10 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 		 */
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	} else if resp.ok {
-		// BUG(djboris) Proper success response handling
-		r, _ := json.Marshal(resp)
-		w.Write(r)
+		// Return success
+		redirect_uri := GetParam(r, "redirect_uri")
+		u, _ := url.Parse(redirect_uri)
+		*u, _ = serializeResponse(*u, response_mode, resp)
+		http.Redirect(w, r, u.String(), http.StatusFound)
 	}
 }

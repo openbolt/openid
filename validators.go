@@ -281,9 +281,8 @@ func validate_req_params(r *http.Request, clt Clientsource) AuthErrResp {
 // Authorization Server. Such a request can be made either using an
 // id_token_hint parameter or by requesting a specific Claim Value as described
 // in Section 5.5.1, if the claims parameter is supported by the implementation.
-func validate_sub_param(r *http.Request) AuthErrResp {
+func validate_sub_param(r *http.Request, sub string) AuthErrResp {
 	// BUG(djboris) Implement
-	// This should be called after auth
 	return AuthErrResp{}
 }
 
