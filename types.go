@@ -23,8 +23,14 @@ type AuthErrResp struct {
 }
 
 /*
- * Claimsource and Clientsource are compatible with each together
+ * Cachesource, Claimsource and Clientsource are compatible with each together
  */
+
+//
+type Cachesource interface {
+	Cache(val AuthzCodeSession)
+	Retire(code string)
+}
 
 // Claimsource returns claims according to `id`
 type Claimsource interface {
@@ -64,4 +70,22 @@ type AuthState struct {
 	Iss           string
 	Sub           string
 	AuthTime      time.Time
+	Acr           string
+	Amr           string
+}
+
+// Session stores information about pending "code" requests
+type AuthzCodeSession struct {
+	Code     string
+	ClientId string
+	Nonce    string
+	AuthTime time.Time
+
+	// When max_age is used, the ID Token returned MUST
+	// include an auth_time Claim Value.
+	MaxAge time.Duration
+
+	Acr           string
+	ClaimsLocales string
+	Claims        interface{} // Ref 5.5
 }

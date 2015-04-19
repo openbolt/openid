@@ -1,6 +1,11 @@
 package openid
 
-import "net/http"
+import (
+	"errors"
+	"net/http"
+
+	"github.com/openbolt/openid/utils"
+)
 
 // Ref 3.1.2.1. Authentication Request
 // An Authentication Request is an OAuth 2.0 Authorization Request that requests
@@ -17,12 +22,15 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 
 	// Check first part of validation
 	if len(err1.Error) != 0 {
+		utils.EDebug(errors.New("Failed Rule 1"))
 		return AuthSuccessResp{}, err1
 	}
 	if len(err2.Error) != 0 {
+		utils.EDebug(errors.New("Failed Rule 2"))
 		return AuthSuccessResp{}, err2
 	}
 	if len(err3.Error) != 0 {
+		utils.EDebug(errors.New("Failed Rule 3"))
 		return AuthSuccessResp{}, err3
 	}
 
@@ -31,37 +39,40 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 
 	// Respond to enduser if not successfully authenticated
 	if state.AuthAbort {
+		utils.EDebug(errors.New("Auth aborted"))
 		err := AuthErrResp{}
 		err.Error = "login_required"
 		err.ErrorDescription = "Authentication aborted"
 		err.State = GetParam(r, "state")
 		return AuthSuccessResp{}, err
 	} else if state.AuthFailed {
+		utils.EDebug(errors.New("Auth failed"))
 		err := AuthErrResp{}
 		err.Error = "access_denied"
 		err.ErrorDescription = "Authentication failed"
 		err.State = GetParam(r, "state")
 		return AuthSuccessResp{}, err
 	} else if state.AuthPrompting {
+		utils.EDebug(errors.New("Auth prompting"))
 		// Simply return if a prompt is presented
 		return AuthSuccessResp{}, AuthErrResp{}
 	} else if !state.AuthOk {
+		utils.EDebug(errors.New("Auth requests reload"))
 		// Reload page using the same method
 		w.Header().Set("Location", r.RequestURI)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else if state.AuthOk {
+		utils.EDebug(errors.New("Auth ok"))
 		// Do really nothing?
 	}
 
-	// BUG(djboris) Check additional Request Values
+	// Can only be checked after authentification
+	// (compare "sub" with requested `claims`->`sub`)
 	err4 := validate_sub_param(r, state.Sub) // ref Rule 4
 	if len(err4.Error) != 0 {
+		utils.EDebug(errors.New("Failed Rule 4"))
 		return AuthSuccessResp{}, err4
 	}
-
-	// var idTokenVals Values
-	//idTokenVals.Set("nonce", GetParam(r, "nonce")) //TODO: Ignore if empty
-	// TODO: display, prompt, max_age, ui_locales, acr_values
 
 	// Run through flow
 	// ref 3
@@ -73,6 +84,7 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	case "hybrid":
 		return op.hybrid_flow(r, state)
 	default:
+		utils.EDebug(errors.New("invalid response_type"))
 		err := AuthErrResp{}
 		err.Error = "invalid_request"
 		err.ErrorDescription = "Invalid `code` request sent"

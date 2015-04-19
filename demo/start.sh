@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go run bindata.go main.go
+go run -race bindata.go main.go

@@ -70,6 +70,8 @@ func (ds *DummySource) Authpage(w http.ResponseWriter, r *http.Request) openid.A
 			res.Sub = sub
 			res.Iss = iss
 			res.AuthTime = time.Now()
+			res.Acr = "0"
+			res.Amr = "none"
 			return res
 		}
 
