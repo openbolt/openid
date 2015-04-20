@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TODO: implement
+// AuthSuccessResp holds all parameters which can be returned to the user if nothing fails
 // Ref 3.1.3.3.  Successful Token Response
 type AuthSuccessResp struct {
 	// Flag if this response is valid, MUST NOT be exported
@@ -14,25 +14,26 @@ type AuthSuccessResp struct {
 	State string `url:"state,omitempty"`
 }
 
+// AuthErrResp holds all parameters which can be returned to the user in error case
 // Ref 3.1.2.6.  Authentication Error Response
 type AuthErrResp struct {
 	Error            string `url:"error"`
 	ErrorDescription string `url:"error_description,omitempty"`
-	ErrorUri         string `url:"error_uri,omitempty"`
+	ErrorURI         string `url:"error_uri,omitempty"`
 	State            string `url:"state,omitempty"`
 }
 
 /*
- * Cachesource, Claimsource and Clientsource are compatible with each together
+ * Cacher, Claimsource and Clientsource are compatible with each together
  */
 
-//
-type Cachesource interface {
-	Cache(val AuthzCodeSession)
+// Cacher is used to cache sessions between code request and id_token retrieval
+type Cacher interface {
+	Cache(val AuthzCodeSession) error
 	Retire(code string)
 }
 
-// Claimsource returns claims according to `id`
+// Claimsource returns claims according to `id`
 type Claimsource interface {
 	// returns value, ok?
 	Get(id, claim, def string) (string, bool)
@@ -41,17 +42,17 @@ type Claimsource interface {
 	//	DeleteRef(id string) error
 }
 
-// Clientsource
+// Clientsource is the databinding for OAuth 2.0 clients
 type Clientsource interface {
 	IsClient(id string) bool
 	//	GetClientType(id string) string
 	// returns "confidential", "public"
 	GetApplType(id string) string
 	// returns "web", "user-agent-based", "native"
-	ValidateRedirectUri(id, uri string) bool
+	ValidateRedirectURI(id, uri string) bool
 }
 
-// EnduserIf is used for rendering enduser dialogs
+// EnduserIf is used for rendering enduser dialogs
 // Authpage must comply with `3.1.2.1.  Authentication Request`
 // In short, it should implement the following:
 //   - Claims: display, prompt, max_age, ui_locales, id_token_hint, login_hint, acr_values
@@ -62,6 +63,8 @@ type EnduserIf interface {
 	// The redirect will be handled outside
 	Authpage(w http.ResponseWriter, r *http.Request) AuthState
 }
+
+// AuthState is used as the return value of EnduserIf
 type AuthState struct {
 	AuthOk        bool
 	AuthAbort     bool
@@ -74,10 +77,10 @@ type AuthState struct {
 	Amr           string
 }
 
-// Session stores information about pending "code" requests
+// AuthzCodeSession stores information about pending "code" requests
 type AuthzCodeSession struct {
 	Code     string
-	ClientId string
+	ClientID string
 	Nonce    string
 	AuthTime time.Time
 

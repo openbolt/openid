@@ -12,7 +12,7 @@ type httpAPI struct {
 	srv *OpenID
 }
 
-func newHttpAPI(srv *OpenID) (*httpAPI, error) {
+func newAPI(srv *OpenID) (*httpAPI, error) {
 	api := new(httpAPI)
 	api.srv = srv
 
@@ -21,7 +21,7 @@ func newHttpAPI(srv *OpenID) (*httpAPI, error) {
 
 // /authorize
 // ref 3.1.2.1
-func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 	// Return if Method not GET or POST
 	if r.Method != "GET" && r.Method != "POST" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -32,21 +32,21 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 	resp, err := api.srv.Authorize(w, r)
 
 	// Get default response_mode for flow and override it if another is set
-	var response_mode string = "fragment"
+	var responseMode = "fragment"
 	if getFlow(GetParam(r, "code")) == "authorization_code" {
-		response_mode = "query"
+		responseMode = "query"
 	}
 	if tmp := GetParam(r, "response_type"); tmp != "" {
-		response_mode = tmp
+		responseMode = tmp
 	}
 
 	if err.Error != "" {
 		// If redirect_uri is not valid, show error as JSON
-		redirect_uri := GetParam(r, "redirect_uri")
-		client_id := GetParam(r, "client_id")
+		redirectURI := GetParam(r, "redirect_uri")
+		clientID := GetParam(r, "client_id")
 		flow := GetParam(r, "code")
-		t := checkRedirectUri(redirect_uri, client_id, flow, api.srv.Clientsrc)
-		u, e := url.Parse(redirect_uri)
+		t := checkRedirectURI(redirectURI, clientID, flow, api.srv.Clientsrc)
+		u, e := url.Parse(redirectURI)
 		if e != nil || !t {
 			utils.EDebug(e)
 			r, _ := json.Marshal(err)
@@ -58,7 +58,7 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 		 * Add error to query or fragment
 		 */
 		err.State = GetParam(r, "state")
-		*u, e = serializeResponse(*u, response_mode, err)
+		*u, e = serializeResponse(*u, responseMode, err)
 		if e != nil {
 			utils.EDebug(e)
 			r, _ := json.Marshal(err)
@@ -72,9 +72,9 @@ func (api *httpAPI) httpAuthorize(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	} else if resp.ok {
 		// Return success
-		redirect_uri := GetParam(r, "redirect_uri")
-		u, _ := url.Parse(redirect_uri)
-		*u, _ = serializeResponse(*u, response_mode, resp)
+		redirectURI := GetParam(r, "redirect_uri")
+		u, _ := url.Parse(redirectURI)
+		*u, _ = serializeResponse(*u, responseMode, resp)
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	}
 }

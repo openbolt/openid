@@ -1,4 +1,5 @@
-// OpenID Connect Core 1.0 provider implementation
+// Package OpenID implements the OpenID Core 1.0 provider
+
 package openid
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/openbolt/openid/utils"
 )
 
+// OpenID implements the OpenID Provider (OP)
 type OpenID struct {
 	// Datasources
 	Claimsrc  Claimsource
@@ -16,8 +18,6 @@ type OpenID struct {
 
 	// True, if server is fully started
 	serving bool
-
-	// Config... going on
 }
 
 // NewProvider returns an blank OpenID Provider instance
@@ -27,7 +27,7 @@ func NewProvider() *OpenID {
 	return op
 }
 
-// Serve starts the OpenID Provider
+// Serve starts the OpenID Provider
 func (op *OpenID) Serve() error {
 	if op.Claimsrc == nil {
 		return errors.New("No Claimsource defined")
@@ -43,14 +43,14 @@ func (op *OpenID) Serve() error {
 	return nil
 }
 
-// AddServer takes an mux and adds basic http endpoints for OpenID Connect
+// AddServer takes an mux and adds basic http endpoints for OpenID Connect
 func (op *OpenID) AddServer(mux *http.ServeMux) error {
-	api, err := newHttpAPI(op)
+	api, err := newAPI(op)
 	if err != nil {
 		utils.ELog(err)
 		return err
 	}
 
-	mux.HandleFunc("/authorize", api.httpAuthorize)
+	mux.HandleFunc("/authorize", api.Authorize)
 	return nil
 }

@@ -9,12 +9,15 @@ import (
 	"github.com/openbolt/openid/utils"
 )
 
-const AUTHZ_CODE_OCTETS_RAND = 32
+const (
+	// AuthzCodeOctetsRand has the number of random bytes used in authz_code `code` generation
+	AuthzCodeOctetsRand = 32
+)
 
 // Ref 3.1.  Authentication using the Authorization Code Flow
 // The Authorization Code Flow returns an Authorization Code to the Client,
 // which can then exchange it for an ID Token and an Access Token directly.
-func (op *OpenID) authz_code_flow(r *http.Request, state AuthState) (AuthSuccessResp, AuthErrResp) {
+func (op *OpenID) authzCodeFlow(r *http.Request, state AuthState) (AuthSuccessResp, AuthErrResp) {
 	// Generate `code` for response
 	sec := make([]byte, AUTHZ_CODE_OCTETS_RAND)
 	_, err := rand.Read(sec)
@@ -36,7 +39,7 @@ func (op *OpenID) authz_code_flow(r *http.Request, state AuthState) (AuthSuccess
 	// Cache request to be able to respond with token
 	ses := AuthzCodeSession{}
 	ses.Code = suc.Code
-	ses.ClientId = GetParam(r, "client_id")
+	ses.ClientID = GetParam(r, "client_id")
 	ses.Nonce = GetParam(r, "state")
 	ses.AuthTime = time.Now()
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
@@ -48,12 +51,12 @@ func (op *OpenID) authz_code_flow(r *http.Request, state AuthState) (AuthSuccess
 	return suc, AuthErrResp{}
 }
 
-func (op *OpenID) implicit_flow(r *http.Request, state AuthState) (AuthSuccessResp, AuthErrResp) {
+func (op *OpenID) implicitFlow(r *http.Request, state AuthState) (AuthSuccessResp, AuthErrResp) {
 	// BUG(djboris) implement
 	return AuthSuccessResp{}, AuthErrResp{}
 }
 
-func (op *OpenID) hybrid_flow(r *http.Request, state AuthState) (AuthSuccessResp, AuthErrResp) {
+func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp, AuthErrResp) {
 	// BUG(djboris) implement
 	return AuthSuccessResp{}, AuthErrResp{}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/openbolt/openid/utils"
 )
 
+// Authorize is called to process an authorization-request from an http api
 // Ref 3.1.2.1. Authentication Request
 // An Authentication Request is an OAuth 2.0 Authorization Request that requests
 // that the End-User be authenticated by the Authorization Server.
@@ -16,9 +17,9 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	}
 
 	// ref 3.1.2.2
-	err1 := validate_oauth_params(r)             // ref Rule 1
-	err2 := validate_scope_param(r)              // ref Rule 2
-	err3 := validate_req_params(r, op.Clientsrc) // ref Rule 3
+	err1 := validateOAuthParams(r)             // ref Rule 1
+	err2 := validateScopeParam(r)              // ref Rule 2
+	err3 := validateReqParams(r, op.Clientsrc) // ref Rule 3
 
 	// Check first part of validation
 	if len(err1.Error) != 0 {
@@ -68,7 +69,7 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 
 	// Can only be checked after authentification
 	// (compare "sub" with requested `claims`->`sub`)
-	err4 := validate_sub_param(r, state.Sub) // ref Rule 4
+	err4 := validateSubParam(r, state.Sub) // ref Rule 4
 	if len(err4.Error) != 0 {
 		utils.EDebug(errors.New("Failed Rule 4"))
 		return AuthSuccessResp{}, err4
@@ -78,11 +79,11 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	// ref 3
 	switch getFlow(GetParam(r, "response_type")) {
 	case "authorization_code":
-		return op.authz_code_flow(r, state)
+		return op.authzCodeFlow(r, state)
 	case "implicit":
-		return op.implicit_flow(r, state)
+		return op.implicitFlow(r, state)
 	case "hybrid":
-		return op.hybrid_flow(r, state)
+		return op.hybridFlow(r, state)
 	default:
 		utils.EDebug(errors.New("invalid response_type"))
 		err := AuthErrResp{}

@@ -44,7 +44,7 @@ func (ds DummySource) GetApplType(id string) string {
 }
 
 // Returns true if host equivalent to id[3::]. Example: cltlocalhost => localhost
-func (ds DummySource) ValidateRedirectUri(id, uri string) bool {
+func (ds DummySource) ValidateRedirectURI(id, uri string) bool {
 	// BUG(djboris) Implement
 	u, err := url.Parse(uri)
 	if err != nil || len(id) < 3 {

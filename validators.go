@@ -23,79 +23,79 @@ const (
 
 	// response-name = 1*response-char
 	// response-char = "_" / DIGIT / ALPHA
-	rx_response_name = "[" + DIGIT + ALPHA + "_" + "]+"
+	rxResponseName = "[" + DIGIT + ALPHA + "_" + "]+"
 
 	// grant-name = 1*name-char
 	// name-char  = "-" / "." / "_" / DIGIT / ALPHA
-	rx_grant_name = "[\\-\\._" + DIGIT + ALPHA + "]+"
+	rxGrantName = "[\\-\\._" + DIGIT + ALPHA + "]+"
 
 	// type-name  = 1*name-char
 	// name-char  = "-" / "." / "_" / DIGIT / ALPHA
-	rx_type_name = "[\\-\\._" + DIGIT + ALPHA + "]+"
+	rxTypeName = "[\\-\\._" + DIGIT + ALPHA + "]+"
 
 	// Regex from rfc3986#appendix-B
-	rx_uri_reference = "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?"
+	rxURIReference = "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?"
 )
 
 var (
 	// client-id     = *VSCHAR
-	re_client_id = regexp.MustCompile(VSCHAR + "*")
+	reClientID = regexp.MustCompile(VSCHAR + "*")
 
 	// client-secret = *VSCHAR
-	re_client_secret = regexp.MustCompile(VSCHAR + "*")
+	reClientSecret = regexp.MustCompile(VSCHAR + "*")
 
 	// response-type = response-name *( SP response-name )
-	re_response_type = regexp.MustCompile(
-		rx_response_name + "(\\s" + rx_response_name + ")*")
+	reResponseType = regexp.MustCompile(
+		rxResponseName + "(\\s" + rxResponseName + ")*")
 
 	// scope       = scope-token *( SP scope-token )
 	// scope-token = 1*NQCHAR
-	re_scope = regexp.MustCompile(NQCHAR + "+(\\s" + NQCHAR + "+)*")
+	reScope = regexp.MustCompile(NQCHAR + "+(\\s" + NQCHAR + "+)*")
 
 	// state      = 1*VSCHAR
-	re_state = regexp.MustCompile(VSCHAR + "+")
+	reState = regexp.MustCompile(VSCHAR + "+")
 
 	// redirect-uri      = URI-reference
-	re_redirect_uri = regexp.MustCompile(rx_uri_reference)
+	reRedirectURI = regexp.MustCompile(rxURIReference)
 
 	// error             = 1*NQSCHAR
-	re_error = regexp.MustCompile(NQSCHAR + "+")
+	reError = regexp.MustCompile(NQSCHAR + "+")
 
 	// error-description = 1*NQSCHAR
-	re_error_description = regexp.MustCompile(NQSCHAR + "+")
+	reErrorDescription = regexp.MustCompile(NQSCHAR + "+")
 
 	// error-uri         = URI-reference
-	re_error_uri = regexp.MustCompile(rx_uri_reference)
+	reErrorURI = regexp.MustCompile(rxURIReference)
 
 	// grant-type = grant-name / URI-reference
-	re_grant_type = regexp.MustCompile("(" + rx_grant_name + "|" + rx_uri_reference + ")")
+	reGrantType = regexp.MustCompile("(" + rxGrantName + "|" + rxURIReference + ")")
 
 	// code       = 1*VSCHAR
-	re_code = regexp.MustCompile(VSCHAR + "+")
+	reCode = regexp.MustCompile(VSCHAR + "+")
 
 	// access-token = 1*VSCHAR
-	re_access_token = regexp.MustCompile(VSCHAR + "+")
+	reAccessToken = regexp.MustCompile(VSCHAR + "+")
 
 	// token-type = type-name / URI-reference
-	re_token_type = regexp.MustCompile("(" + rx_type_name + "|" + rx_uri_reference + ")")
+	reTokenType = regexp.MustCompile("(" + rxTypeName + "|" + rxURIReference + ")")
 
 	// expires-in = 1*DIGIT
-	re_expires_in = regexp.MustCompile(DIGIT + "+")
+	reExpiresIn = regexp.MustCompile(DIGIT + "+")
 
 	// username = *UNICODECHARNOCRLF
-	re_username = regexp.MustCompile(UNICODECHARNOCRLF + "*")
+	reUsername = regexp.MustCompile(UNICODECHARNOCRLF + "*")
 
 	// password = *UNICODECHARNOCRLF
-	re_password = regexp.MustCompile(UNICODECHARNOCRLF + "*")
+	rePassword = regexp.MustCompile(UNICODECHARNOCRLF + "*")
 
 	// refresh-token = 1*VSCHAR
-	re_refresh_token = regexp.MustCompile(VSCHAR + "+")
+	reRefreshToken = regexp.MustCompile(VSCHAR + "+")
 
 	// The syntax for new endpoint parameters is defined in
 	// OAuth 2.0 Section 8.2
 	// param-name = 1*name-char
 	// name-char  = "-" / "." / "_" / DIGIT / ALPHA
-	re_param_name = regexp.MustCompile("[\\-\\._" + DIGIT + ALPHA + "]+")
+	reParamName = regexp.MustCompile("[\\-\\._" + DIGIT + ALPHA + "]+")
 )
 
 /*
@@ -106,58 +106,56 @@ var (
 // The Authorization Server MUST validate all the OAuth 2.0 parameters according
 // to the OAuth 2.0 specification.
 // Ref rfc6749 appendix-A
-func validate_oauth_params(r *http.Request) AuthErrResp {
+func validateOAuthParams(r *http.Request) AuthErrResp {
 	test := func(parm string, re *regexp.Regexp, cont *string) bool {
 		if GetParam(r, parm) != "" && !re.MatchString(GetParam(r, parm)) {
 			utils.EDebug(errors.New(parm + " malformed"))
 			*cont = *cont + parm + ";"
 			return false
-		} else {
-			return true
 		}
+		return true
 	}
 
-	var errParm *string = new(string)
-	var ok bool = true
-	ok = ok && test("client_id", re_client_id, errParm)
-	ok = ok && test("client_secret", re_client_secret, errParm)
-	ok = ok && test("response_type", re_response_type, errParm)
-	ok = ok && test("scope", re_scope, errParm)
-	ok = ok && test("state", re_state, errParm)
-	ok = ok && test("redirect_uri", re_redirect_uri, errParm)
-	ok = ok && test("error", re_error, errParm)
-	ok = ok && test("error_description", re_error_description, errParm)
-	ok = ok && test("error_uri", re_error_uri, errParm)
-	ok = ok && test("grant_type", re_grant_type, errParm)
-	ok = ok && test("code", re_code, errParm)
-	ok = ok && test("access_token", re_access_token, errParm)
-	ok = ok && test("token_type", re_token_type, errParm)
-	ok = ok && test("expires_in", re_expires_in, errParm)
-	ok = ok && test("username", re_username, errParm)
-	ok = ok && test("password", re_password, errParm)
-	ok = ok && test("refresh_token", re_refresh_token, errParm)
+	var errParm = new(string)
+	var ok = true
+	ok = ok && test("client_id", reClientID, errParm)
+	ok = ok && test("client_secret", reClientSecret, errParm)
+	ok = ok && test("response_type", reResponseType, errParm)
+	ok = ok && test("scope", reScope, errParm)
+	ok = ok && test("state", reState, errParm)
+	ok = ok && test("redirect_uri", reRedirectURI, errParm)
+	ok = ok && test("error", reError, errParm)
+	ok = ok && test("error_description", reErrorDescription, errParm)
+	ok = ok && test("error_uri", reErrorURI, errParm)
+	ok = ok && test("grant_type", reGrantType, errParm)
+	ok = ok && test("code", reCode, errParm)
+	ok = ok && test("access_token", reAccessToken, errParm)
+	ok = ok && test("token_type", reTokenType, errParm)
+	ok = ok && test("expires_in", reExpiresIn, errParm)
+	ok = ok && test("username", reUsername, errParm)
+	ok = ok && test("password", rePassword, errParm)
+	ok = ok && test("refresh_token", reRefreshToken, errParm)
 
 	resp := AuthErrResp{}
 	if ok {
 		utils.EDebug(errors.New("returning ok"))
-		return resp
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "One or more malformed request parameters: " + *errParm
 		resp.State = GetParam(r, "state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
-		return resp
 	}
+	return resp
 }
 
 // Rule 2:
 // Verify that a scope parameter is present and contains the openid scope value.
-func validate_scope_param(r *http.Request) AuthErrResp {
+func validateScopeParam(r *http.Request) AuthErrResp {
 	args := strings.Split(GetParam(r, "scope"), " ")
 
 	// Check if openid value in scope
-	var ok bool = false
+	var ok = false
 	for _, v := range args {
 		if v == "openid" {
 			ok = true
@@ -167,15 +165,14 @@ func validate_scope_param(r *http.Request) AuthErrResp {
 	resp := AuthErrResp{}
 	if ok {
 		utils.EDebug(errors.New("returning ok"))
-		return resp
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "Scope doesn't contain openid"
 		resp.State = GetParam(r, "state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
-		return resp
 	}
+	return resp
 }
 
 // Rule 3:
@@ -184,8 +181,8 @@ func validate_scope_param(r *http.Request) AuthErrResp {
 //   Scope  will not be tested as it is already done in validate_scope_param
 //   Required params: scope, response_type, client_id, redirect_uri
 //   For Implicit: + nonce
-func validate_req_params(r *http.Request, clt Clientsource) AuthErrResp {
-	var ok bool = true
+func validateReqParams(r *http.Request, clt Clientsource) AuthErrResp {
+	var ok = true
 	var errs string
 
 	// Check existence of parameters
@@ -236,9 +233,9 @@ func validate_req_params(r *http.Request, clt Clientsource) AuthErrResp {
 	// and provided the OP allows the use of http Redirection URIs in this case.
 	// The Redirection URI MAY use an alternate scheme, such as one that is
 	// intended to identify a callback into a native application.
-	client_id := GetParam(r, "client_id")
-	redirect_uri := GetParam(r, "redirect_uri")
-	t = checkRedirectUri(redirect_uri, client_id, flow, clt)
+	clientID := GetParam(r, "client_id")
+	redirectURI := GetParam(r, "redirect_uri")
+	t = checkRedirectURI(redirectURI, clientID, flow, clt)
 	if !t {
 		errs += "invalid or not allowed redirect_uri;"
 	}
@@ -260,15 +257,14 @@ func validate_req_params(r *http.Request, clt Clientsource) AuthErrResp {
 	resp := AuthErrResp{}
 	if ok {
 		utils.EDebug(errors.New("returning ok"))
-		return resp
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "One or more not valid parameters: " + errs
 		resp.State = GetParam(r, "state")
 
 		utils.EDebug(errors.New("returning invalid_request"))
-		return resp
 	}
+	return resp
 }
 
 // Rule 4
@@ -281,34 +277,33 @@ func validate_req_params(r *http.Request, clt Clientsource) AuthErrResp {
 // Authorization Server. Such a request can be made either using an
 // id_token_hint parameter or by requesting a specific Claim Value as described
 // in Section 5.5.1, if the claims parameter is supported by the implementation.
-func validate_sub_param(r *http.Request, sub string) AuthErrResp {
+func validateSubParam(r *http.Request, sub string) AuthErrResp {
 	// BUG(djboris) Implement
 	return AuthErrResp{}
 }
 
-// checkRedirectUri validates an redirect_uri according to flow type
-func checkRedirectUri(redirect_uri, client_id, flow string, clt Clientsource) bool {
+// checkRedirectURI validates an redirect_uri according to flow type
+func checkRedirectURI(redirectURI, clientID, flow string, clt Clientsource) bool {
 	if flow == "implicit" {
 		// ...the Redirection URI MUST NOT use the http scheme unless
 		// the Client is a native application, in which case it
 		// MAY use the http: scheme with localhost as the hostname.
-		uri, err := url.Parse(redirect_uri)
+		uri, err := url.Parse(redirectURI)
 		if err != nil {
 			utils.EInfo(err)
 			return false
 		}
 		if uri.Scheme == "http" &&
-			(clt.GetApplType(client_id) != "native" || uri.Host != "localhost") {
+			(clt.GetApplType(clientID) != "native" || uri.Host != "localhost") {
 			utils.EDebug(errors.New("Not compatible redirect_uri"))
 			return false
 		}
-		return true
 
 	} else {
-		if !clt.ValidateRedirectUri(client_id, redirect_uri) {
+		if !clt.ValidateRedirectURI(clientID, redirectURI) {
 			utils.EDebug(errors.New("Client hasn't registered this redirect_uri"))
 			return false
 		}
-		return true
 	}
+	return true
 }
