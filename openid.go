@@ -15,6 +15,7 @@ type OpenID struct {
 	Claimsrc  Claimsource
 	Clientsrc Clientsource
 	Enduser   EnduserIf
+	Cache     Cacher
 
 	// True, if server is fully started
 	serving bool
@@ -37,6 +38,9 @@ func (op *OpenID) Serve() error {
 	}
 	if op.Enduser == nil {
 		return errors.New("No EnduserIf defined")
+	}
+	if op.Cache == nil {
+		return errors.New("No Cache defined")
 	}
 	op.serving = true
 

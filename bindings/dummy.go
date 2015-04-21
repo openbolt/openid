@@ -135,3 +135,15 @@ func dummyAuth(user, pw string) (sub, iss string) {
 		return v[0], v[1]
 	}
 }
+
+/*
+ * Cacher
+ */
+func (ds *DummySource) Cache(c openid.Session) error {
+	// BUG Implement!
+	return nil
+}
+
+func (ds *DummySource) Retire(id string) {
+	// BUG Implement!
+}

@@ -1,6 +1,8 @@
 package openid
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"net/url"
@@ -69,4 +71,16 @@ func getFlow(field string) string {
 	default:
 		return ""
 	}
+}
+
+// GetRandomString returns an random string with size `size`
+func GetRandomString(size int) (string, error) {
+	// Generate `code` for response
+	sec := make([]byte, size)
+	_, err := rand.Read(sec)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(sec), nil
 }

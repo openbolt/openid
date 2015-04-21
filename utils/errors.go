@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// EDebug prints all debug messages
 func EDebug(err error) {
 	if err != nil {
 		pc, file, line, _ := runtime.Caller(1)
@@ -14,6 +15,7 @@ func EDebug(err error) {
 	}
 }
 
+// EInfo prints all info messages
 func EInfo(err error) {
 	if err != nil {
 		pc, file, line, _ := runtime.Caller(1)
@@ -22,6 +24,7 @@ func EInfo(err error) {
 	}
 }
 
+// ELog prints all error or unclassified messages
 func ELog(err error) {
 	if err != nil {
 		pc, file, line, _ := runtime.Caller(1)

@@ -16,10 +16,11 @@ func main() {
 	op.Claimsrc = src
 	op.Clientsrc = src
 	op.Enduser = src
+	op.Cache = src
 
 	// Configure http api
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", hello_world)
+	mux.HandleFunc("/", helloWorld)
 
 	op.AddServer(mux)
 
@@ -35,7 +36,7 @@ func main() {
 	log.Fatal(err)
 }
 
-func hello_world(w http.ResponseWriter, r *http.Request) {
+func helloWorld(w http.ResponseWriter, r *http.Request) {
 	data, _ := Asset("hello.html")
 	w.Write(data)
 }

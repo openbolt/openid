@@ -9,9 +9,13 @@ import (
 // Ref 3.1.3.3.  Successful Token Response
 type AuthSuccessResp struct {
 	// Flag if this response is valid, MUST NOT be exported
-	ok    bool   `url:"-"`
-	Code  string `url:"code,omitempty"`
-	State string `url:"state,omitempty"`
+	ok          bool          `url:"-"`
+	Code        string        `url:"code,omitempty"`
+	State       string        `url:"state,omitempty"`
+	IDToken     *IDToken      `url:"id_token,omitempty"`
+	AccessToken string        `url:"access_token,omitempty"`
+	TokenType   string        `url:"token_type,omitempty"`
+	ExpiresIn   time.Duration `url:"expires_in,omitempty"`
 }
 
 // AuthErrResp holds all parameters which can be returned to the user in error case
@@ -29,7 +33,7 @@ type AuthErrResp struct {
 
 // Cacher is used to cache sessions between code request and id_token retrieval
 type Cacher interface {
-	Cache(val AuthzCodeSession) error
+	Cache(val Session) error
 	Retire(code string)
 }
 
@@ -77,8 +81,9 @@ type AuthState struct {
 	Amr           string
 }
 
-// AuthzCodeSession stores information about pending "code" requests
-type AuthzCodeSession struct {
+// Session stores information about pending "code" requests, and data used for
+// IDToken generation
+type Session struct {
 	Code     string
 	ClientID string
 	Nonce    string
