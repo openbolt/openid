@@ -56,6 +56,7 @@ func (ds DummySource) ValidateRedirectURI(id, uri string) bool {
 /*
  * EnduserIf
  */
+// BUG Implement 5.5.1.1.  Requesting the "acr" Claim
 func (ds *DummySource) Authpage(w http.ResponseWriter, r *http.Request) openid.AuthState {
 	var warn string
 
@@ -139,11 +140,17 @@ func dummyAuth(user, pw string) (sub, iss string) {
 /*
  * Cacher
  */
+// BUG TODO: Locking
+var sessions map[string]openid.Session
+
 func (ds *DummySource) Cache(c openid.Session) error {
-	// BUG Implement!
+	if sessions == nil {
+		sessions = make(map[string]openid.Session)
+	}
+	sessions[c.Code] = c
 	return nil
 }
 
-func (ds *DummySource) Retire(id string) {
+func (ds *DummySource) Retire(code string) {
 	// BUG Implement!
 }

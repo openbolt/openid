@@ -87,6 +87,7 @@ type Session struct {
 	Code     string
 	ClientID string
 	Nonce    string
+	Scope    string
 	AuthTime time.Time
 
 	// When max_age is used, the ID Token returned MUST
@@ -95,5 +96,24 @@ type Session struct {
 
 	Acr           string
 	ClaimsLocales string
-	Claims        interface{} // Ref 5.5
+	Claims        ClaimsRequest
+}
+
+// ClaimsRequest is used to deserialize the `claims` request for future processing
+// Ref 5.5. Requesting Claims using the "claims" Request Parameter
+type ClaimsRequest struct {
+	Userinfo map[string]ClaimRequest
+	IDToken  map[string]ClaimRequest
+}
+
+// ClaimRequest defines the request type for the specified parameters
+// Ref 5.5.1.  Individual Claims Requests
+type ClaimRequest struct {
+	// Default means the default manner (null)
+	Default bool
+
+	// If !Default, then these are used
+	Essential bool
+	Value     string
+	Values    []string
 }

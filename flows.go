@@ -38,6 +38,7 @@ func (op *OpenID) authzCodeFlow(r *http.Request, state AuthState) (AuthSuccessRe
 	ses.Code = suc.Code
 	ses.ClientID = GetParam(r, "client_id")
 	ses.Nonce = GetParam(r, "nonce")
+	ses.Scope = GetParam(r, "scope")
 	ses.AuthTime = state.AuthTime
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
 	ses.Acr = state.Acr
@@ -55,6 +56,7 @@ func (op *OpenID) implicitFlow(r *http.Request, state AuthState) (AuthSuccessRes
 	ses := Session{}
 	ses.ClientID = GetParam(r, "client_id")
 	ses.Nonce = GetParam(r, "nonce")
+	ses.Scope = GetParam(r, "scope")
 	ses.AuthTime = state.AuthTime
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
 	ses.Acr = state.Acr
@@ -93,6 +95,7 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	ses.Code = code
 	ses.ClientID = GetParam(r, "client_id")
 	ses.Nonce = GetParam(r, "nonce")
+	ses.Scope = GetParam(r, "scope")
 	ses.AuthTime = state.AuthTime
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
 	ses.Acr = state.Acr
