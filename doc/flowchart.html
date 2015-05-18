@@ -1,0 +1,36 @@
+<html>
+	<head>
+		<script src="https://cdn.rawgit.com/knsv/mermaid/0.3.0/dist/mermaid.full.js"></script>
+	</head>
+	<body>
+		<div class="mermaid">
+graph TD;
+    OpenID.Serve-->httpAPI.Authorize;
+    httpAPI.Authorize-->OpenID.Authorize;
+    OpenID.Authorize-->validate[Validate Rule 1-3];
+
+    validate-->httpAPI.Authorize;
+    validate-->EnduserIf.Authpage;
+
+    EnduserIf.Authpage-->httpAPI.Authorize;
+    EnduserIf.Authpage-->validate4[Validate Rule 4];
+
+    validate4-->OpenID.authzCodeFlow;
+    validate4-->OpenID.implicitFlow;
+    validate4-->OpenID.hybridFlow;
+    validate4-->httpAPI.Authorize;
+
+    OpenID.authzCodeFlow-->code1[Code: GetRandomString];
+    OpenID.hybridFlow-->ac1[AccessToken.Create];
+    OpenID.implicitFlow-->ac2[AccessToken.Create];
+    ac1-->code[Code: GetRandomString];
+
+    code-->cs(CacheSession);
+    code1-->cs;
+    ac2-->cs;
+
+    cs-->httpAPI.Authorize;
+
+		</div>
+	</body>
+</html>

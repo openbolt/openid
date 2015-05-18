@@ -14,6 +14,30 @@ import (
 	"github.com/openbolt/openid/bindings"
 )
 
+{{ range . }}
+func Test{{ .Case }}(t *testing.T) {
+	redirect_url := ts.URL + "/backlink"
+
+	resp := sGet("{{ .URI }}")
+	if !rextest(resp.Body, "{{ .RexBody }}") {
+		t.Errorf("Body does not match %s", "{{ .RexBody }}")
+	}
+
+	if !rextest(resp.Url.Path, "{{ .RexPath }}") {
+		t.Errorf("URI does not match %s", "{{ .RexPath }}")
+	}
+
+	if {{ .Status }} >  0 && resp.Status != {{ .Status }} {
+		t.Errorf("Status is %i, should be {{ .Status }}", resp.Status)
+	}
+}
+{{ end }}
+
+func rextest(val, rex string) bool {
+	return regexp.Compile(rex).Match([]byte(val))
+}
+
+
 var client *http.Client
 var op *openid.OpenID
 var ts *httptest.Server
@@ -30,10 +54,10 @@ func TestMain(m *testing.M) {
 
 	// Set bindings
 	src := new(bindings.DummySource)
-	op.Auth = src
-	op.Claim = src
-	op.Client = src
-	op.EnduserIf = src
+	op.Claimsrc = src
+	op.Clientsrc = src
+	op.Enduser = src
+	op.Cache = src
 
 	// Set TLS Server
 	mux := http.NewServeMux()
@@ -73,51 +97,4 @@ func sGet(path string) getResp {
 	r.Header = resp.Header
 
 	return r
-}
-
-func TestHttpAuthorize_invalid_request(t *testing.T) {
-	redirect_url := ts.URL + "/backlink"
-
-	resp := sGet("/authorize")
-	if !strings.Contains(resp.Body, "invalid_request") {
-		t.Error("Wrong response when request with no params")
-	}
-
-	resp = sGet("/authorize?scope=openid&redirect_uri=" + redirect_url)
-	if resp.Url.Path != "/backlink" {
-		t.Error("Redirect on valid url not working")
-	}
-
-	resp = sGet("/authorize?scope=openid&redirect_uri=invalidurl")
-	if resp.Status == 404 {
-		t.Error("Redirect on INvalid url should not work")
-	}
-}
-
-func TestHttpAuthorize_login(t *testing.T) {
-	redirect_url := ts.URL + "/backlink"
-
-	resp := sGet("/authorize" +
-		"?scope=openid" +
-		"&client_id=cltTest1" +
-		"&login_hint=myHint" +
-		"&redirect_uri=" + redirect_url +
-		"&response_type=code")
-	if !strings.Contains(resp.Body, "myHint") {
-		t.Error("Login hint not displaying")
-	}
-}
-
-func TestHttpAuthorize_redirections(t *testing.T) {
-	redirect_url := ts.URL + "/backlink"
-
-	t.Log("Testing redirect to login form...")
-	resp := sGet("/authorize" +
-		"?scope=openid" +
-		"&client_id=cltTest1" +
-		"&redirect_uri=" + redirect_url +
-		"&response_type=code")
-	if !strings.Contains(resp.Body, ">Login<") {
-		t.Error("Not redirected to login form")
-	}
 }

@@ -3,6 +3,7 @@ package openid
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -83,4 +84,27 @@ func GetRandomString(size int) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(sec), nil
+}
+
+func ReadClaimsRequest(data string) (ClaimsRequest, error) {
+	type csreq struct {
+		Userinfo map[string]csreq `json:"userinfo"`
+		IDToken  map[string]csreq `json:"id_token"`
+	}
+
+	type creq struct {
+		Essential bool     `json:"essential"`
+		Value     string   `json:"value"`
+		Values    []string `json:"values"`
+	}
+	raw := csreq{}
+	err := json.Unmarshal([]byte(data), raw)
+	if err != nil {
+		utils.ELog(err)
+		return ClaimsRequest{}, err
+	}
+
+	// BUG Not implemented yes
+	// TODO: Convert csreq to ClaimsRequest
+	return ClaimsRequest{}, errors.New("Not implemented yet")
 }

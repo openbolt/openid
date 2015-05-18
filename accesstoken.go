@@ -11,8 +11,7 @@ type AccessToken struct {
 	ExpiresIn time.Duration
 }
 
-// NewAccessToken generates an new AccessToken according to infos provided in `ses`
-func NewAccessToken(ses Session) *AccessToken {
+func (t *AccessToken) Load(ses Session) *AccessToken {
 	// BUG: Not implemented
 	return &AccessToken{}
 }

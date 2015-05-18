@@ -43,7 +43,11 @@ func (op *OpenID) authzCodeFlow(r *http.Request, state AuthState) (AuthSuccessRe
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
 	ses.Acr = state.Acr
 	ses.ClaimsLocales = GetParam(r, "claim_locales")
-	ses.Claims = GetParam(r, "claims") // TODO: Unmarshal
+	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
+	if err != nil {
+		utils.ELog(err)
+		// TODO: Is it safe to continue program flow here?
+	}
 
 	// Now it's needed to cache this
 	op.Cache.Cache(ses)
@@ -61,14 +65,20 @@ func (op *OpenID) implicitFlow(r *http.Request, state AuthState) (AuthSuccessRes
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
 	ses.Acr = state.Acr
 	ses.ClaimsLocales = GetParam(r, "claim_locales")
-	ses.Claims = GetParam(r, "claims") // TODO: Unmarshal
+	var err error
+	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
+	if err != nil {
+		utils.ELog(err)
+		// TODO: Is it safe to continue program flow here?
+	}
 
 	suc := AuthSuccessResp{ok: true}
 	suc.State = GetParam(r, "state")
 	suc.IDToken = NewIDToken(ses)
 
 	if GetParam(r, "response_type") != "id_token" {
-		tok := NewAccessToken(ses)
+		tok := AccessToken{}
+		tok.Load(ses)
 		suc.AccessToken = tok.Token
 		suc.TokenType = tok.TokenType
 		suc.ExpiresIn = tok.ExpiresIn
@@ -100,7 +110,11 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	ses.MaxAge, _ = time.ParseDuration(GetParam(r, "max_age"))
 	ses.Acr = state.Acr
 	ses.ClaimsLocales = GetParam(r, "claim_locales")
-	ses.Claims = GetParam(r, "claims") // TODO: Unmarshal
+	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
+	if err != nil {
+		utils.ELog(err)
+		// TODO: Is it safe to continue program flow here?
+	}
 
 	// Generate response value
 	suc := AuthSuccessResp{ok: true}
@@ -109,7 +123,8 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	suc.IDToken = NewIDToken(ses)
 
 	if GetParam(r, "response_type") != "id_token" {
-		tok := NewAccessToken(ses)
+		tok := AccessToken{}
+		tok.Load(ses)
 		suc.AccessToken = tok.Token
 		suc.TokenType = tok.TokenType
 		suc.ExpiresIn = tok.ExpiresIn

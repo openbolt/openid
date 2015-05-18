@@ -102,8 +102,8 @@ type Session struct {
 // ClaimsRequest is used to deserialize the `claims` request for future processing
 // Ref 5.5. Requesting Claims using the "claims" Request Parameter
 type ClaimsRequest struct {
-	Userinfo map[string]ClaimRequest
-	IDToken  map[string]ClaimRequest
+	Userinfo map[string]ClaimRequest `json:"userinfo"`
+	IDToken  map[string]ClaimRequest `json:"id_token"`
 }
 
 // ClaimRequest defines the request type for the specified parameters
@@ -113,7 +113,6 @@ type ClaimRequest struct {
 	Default bool
 
 	// If !Default, then these are used
-	Essential bool
-	Value     string
-	Values    []string
+	Essential bool     `json:"essential,omitempty"`
+	Values    []string `json:"values,omitempty"`
 }
