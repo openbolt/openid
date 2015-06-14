@@ -87,6 +87,10 @@ func GetRandomString(size int) (string, error) {
 }
 
 func ReadClaimsRequest(data string) (ClaimsRequest, error) {
+	if data == "" {
+		return ClaimsRequest{}, nil
+	}
+
 	type csreq struct {
 		Userinfo map[string]csreq `json:"userinfo"`
 		IDToken  map[string]csreq `json:"id_token"`

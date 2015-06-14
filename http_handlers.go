@@ -2,6 +2,7 @@ package openid
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -29,18 +30,27 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Run the authorization
 	resp, err := api.srv.Authorize(w, r)
 
 	// Get default response_mode for flow and override it if another is set
-	var responseMode = "fragment"
+	var responseMode string
 	if getFlow(GetParam(r, "code")) == "authorization_code" {
+		utils.EDebug(errors.New("Using query response_mode"))
 		responseMode = "query"
+	} else {
+		responseMode = "fragment"
 	}
+	utils.EDebug(errors.New("Using response_mode " + responseMode))
+
+	// Get response_type
 	if tmp := GetParam(r, "response_type"); tmp != "" {
 		responseMode = tmp
 	}
 
 	if err.Error != "" {
+		utils.ELog(errors.New("Auth failed: " + err.Error))
+
 		// If redirect_uri is not valid, show error as JSON
 		redirectURI := GetParam(r, "redirect_uri")
 		clientID := GetParam(r, "client_id")
@@ -69,12 +79,17 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 		/*
 		 * Finish, Do 302 Redirect
 		 */
+		utils.EDebug(errors.New("Redirecting to " + u.String()))
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	} else if resp.ok {
+		utils.EDebug(errors.New("Auth succeeded"))
+
 		// Return success
 		redirectURI := GetParam(r, "redirect_uri")
 		u, _ := url.Parse(redirectURI)
 		*u, _ = serializeResponse(*u, responseMode, resp)
+
+		utils.EDebug(errors.New("Redirecting to " + u.String()))
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	}
 }

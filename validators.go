@@ -279,6 +279,7 @@ func validateReqParams(r *http.Request, clt Clientsource) AuthErrResp {
 // in Section 5.5.1, if the claims parameter is supported by the implementation.
 func validateSubParam(r *http.Request, sub string) AuthErrResp {
 	// BUG(djboris) Implement
+	utils.EInfo(errors.New("returning ok, as Not Implemented"))
 	return AuthErrResp{}
 }
 

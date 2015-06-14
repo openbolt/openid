@@ -21,6 +21,7 @@ func main() {
 	// Configure http api
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", helloWorld)
+	mux.HandleFunc("/.well-known/openid-configuration", finger)
 
 	op.AddServer(mux)
 
@@ -41,4 +42,9 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-//go:generate go-bindata -o bindata.go hello.html
+func finger(w http.ResponseWriter, r *http.Request) {
+	data, _ := Asset("finger.json")
+	w.Write(data)
+}
+
+//go:generate go-bindata -o bindata.go hello.html finger.json

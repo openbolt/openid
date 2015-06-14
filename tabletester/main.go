@@ -6,6 +6,7 @@ package main
 // - Path to output
 import (
 	"encoding/csv"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -23,7 +24,8 @@ type Data struct {
 }
 
 func main() {
-	t := template.Must(template.New("test.tmpl").ParseFiles(os.Args[2]))
+	f, _ := ioutil.ReadFile(os.Args[2])
+	t := template.Must(template.New("test.tmpl").Parse(string(f)))
 
 	// Read testcases
 	fd, _ := os.Open(os.Args[1])

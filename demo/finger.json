@@ -1,0 +1,8 @@
+{
+ "issuer": "https://localhost:8443",
+ "authorization_endpoint": "https://localhost:8443/authorize",
+ "token_endpoint": "https://localhost:8443/oauth2/v4/token",
+ "userinfo_endpoint": "https://localhost:8443/oauth2/v3/userinfo",
+ "revocation_endpoint": "https://accounts.google.com/o/oauth2/revoke",
+ "jwks_uri": "https://localhost:8443/oauth2/v3/certs"
+}

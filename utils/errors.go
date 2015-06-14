@@ -1,17 +1,25 @@
 package utils
 
 import (
-	"log"
 	"runtime"
+	"strconv"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
 
 // EDebug prints all debug messages
 func EDebug(err error) {
 	if err != nil {
 		pc, file, line, _ := runtime.Caller(1)
 		file = file[strings.LastIndex(file, "/")+1 : len(file)]
-		log.Printf("%s:%d %s %s", file, line, runtime.FuncForPC(pc).Name(), err.Error())
+		src := file + ":" + strconv.Itoa(line)
+		proc := runtime.FuncForPC(pc).Name()
+		log.WithFields(log.Fields{"src": src, "proc": proc}).Debug(err.Error())
 	}
 }
 
@@ -20,7 +28,9 @@ func EInfo(err error) {
 	if err != nil {
 		pc, file, line, _ := runtime.Caller(1)
 		file = file[strings.LastIndex(file, "/")+1 : len(file)]
-		log.Printf("%s:%d %s %s", file, line, runtime.FuncForPC(pc).Name(), err.Error())
+		src := file + ":" + strconv.Itoa(line)
+		proc := runtime.FuncForPC(pc).Name()
+		log.WithFields(log.Fields{"src": src, "proc": proc}).Info(err.Error())
 	}
 }
 
@@ -29,6 +39,8 @@ func ELog(err error) {
 	if err != nil {
 		pc, file, line, _ := runtime.Caller(1)
 		file = file[strings.LastIndex(file, "/")+1 : len(file)]
-		log.Printf("%s:%d %s %s", file, line, runtime.FuncForPC(pc).Name(), err.Error())
+		src := file + ":" + strconv.Itoa(line)
+		proc := runtime.FuncForPC(pc).Name()
+		log.WithFields(log.Fields{"src": src, "proc": proc}).Error(err.Error())
 	}
 }

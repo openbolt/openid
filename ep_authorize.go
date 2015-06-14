@@ -63,8 +63,7 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 		w.Header().Set("Location", r.RequestURI)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else if state.AuthOk {
-		utils.EDebug(errors.New("Auth ok"))
-		// Do really nothing?
+		utils.EDebug(errors.New("Authpage returned ok"))
 	}
 
 	// Can only be checked after authentification
@@ -79,13 +78,16 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	// ref 3
 	switch getFlow(GetParam(r, "response_type")) {
 	case "authorization_code":
+		utils.EDebug(errors.New("Using authzCodeFlow"))
 		return op.authzCodeFlow(r, state)
 	case "implicit":
+		utils.EDebug(errors.New("Using implicit flow"))
 		return op.implicitFlow(r, state)
 	case "hybrid":
+		utils.EDebug(errors.New("Using hybrid flow"))
 		return op.hybridFlow(r, state)
 	default:
-		utils.EDebug(errors.New("invalid response_type"))
+		utils.EDebug(errors.New("invalid response_type, cannot find flow"))
 		err := AuthErrResp{}
 		err.Error = "invalid_request"
 		err.ErrorDescription = "Invalid `code` request sent"

@@ -1,100 +1,12 @@
-package openid_test
+The name is {{.Name}}.
+The age is {{.Age}}.
+{{range .Emails}}
+        An email is {{.}}
+{{end}}
 
-import (
-	"crypto/tls"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"os"
-	"strings"
-	"testing"
-
-	"github.com/openbolt/openid"
-	"github.com/openbolt/openid/bindings"
-)
-
-{{ range . }}
-func Test{{ .Case }}(t *testing.T) {
-	redirect_url := ts.URL + "/backlink"
-
-	resp := sGet("{{ .URI }}")
-	if !rextest(resp.Body, "{{ .RexBody }}") {
-		t.Errorf("Body does not match %s", "{{ .RexBody }}")
-	}
-
-	if !rextest(resp.Url.Path, "{{ .RexPath }}") {
-		t.Errorf("URI does not match %s", "{{ .RexPath }}")
-	}
-
-	if {{ .Status }} >  0 && resp.Status != {{ .Status }} {
-		t.Errorf("Status is %i, should be {{ .Status }}", resp.Status)
-	}
-}
-{{ end }}
-
-func rextest(val, rex string) bool {
-	return regexp.Compile(rex).Match([]byte(val))
-}
-
-
-var client *http.Client
-var op *openid.OpenID
-var ts *httptest.Server
-
-func TestMain(m *testing.M) {
-	// Setup HTTP(S) client
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client = &http.Client{Transport: tr}
-
-	// Setup openid provider
-	op = openid.NewProvider()
-
-	// Set bindings
-	src := new(bindings.DummySource)
-	op.Claimsrc = src
-	op.Clientsrc = src
-	op.Enduser = src
-	op.Cache = src
-
-	// Set TLS Server
-	mux := http.NewServeMux()
-	mux.HandleFunc("/backlink", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("backlink!"))
-	})
-	op.AddServer(mux)
-	ts = httptest.NewUnstartedServer(mux)
-	defer ts.Close()
-	ts.StartTLS()
-
-	// Start
-	op.Serve()
-
-	os.Exit(m.Run())
-}
-
-type getResp struct {
-	Url    url.URL
-	Body   string
-	Status int
-	Header http.Header
-}
-
-// sGet (simple Get) does an GET request to the OpenID server
-func sGet(path string) getResp {
-	resp, err := client.Get(ts.URL + path)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	r := getResp{}
-	r.Url = *resp.Request.URL
-	r.Status = resp.StatusCode
-	bbody, _ := ioutil.ReadAll(resp.Body)
-	r.Body = string(bbody)
-	r.Header = resp.Header
-
-	return r
-}
+{{with .Jobs}}
+    {{range .}}
+        An employer is {{.Employer}}
+        and the role is {{.Role}}
+    {{end}}
+{{end}}
