@@ -1,0 +1,2 @@
+scope,response_type,client_id,redirect_uri,state,response_mode,nonce,prompt,acr_values,_username,_password,_login,-Case,-Status,-RexBody,-RexPath
+openid,code,clt_bla,_backlink_,,query,,,,sub.iss,foo,yes,Demo,200,no,

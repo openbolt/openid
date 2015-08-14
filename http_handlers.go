@@ -35,8 +35,7 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 
 	// Get default response_mode for flow and override it if another is set
 	var responseMode string
-	if getFlow(GetParam(r, "code")) == "authorization_code" {
-		utils.EDebug(errors.New("Using query response_mode"))
+	if getFlow(GetParam(r, "response_type")) == "authorization_code" {
 		responseMode = "query"
 	} else {
 		responseMode = "fragment"
@@ -44,9 +43,9 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 	utils.EDebug(errors.New("Using response_mode " + responseMode))
 
 	// Get response_type
-	if tmp := GetParam(r, "response_type"); tmp != "" {
-		responseMode = tmp
-	}
+	// if tmp := GetParam(r, "response_type"); tmp != "" {
+	// 	responseType = tmp
+	// }
 
 	if err.Error != "" {
 		utils.ELog(errors.New("Auth failed: " + err.Error))
@@ -91,5 +90,14 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 
 		utils.EDebug(errors.New("Redirecting to " + u.String()))
 		http.Redirect(w, r, u.String(), http.StatusFound)
+	}
+}
+
+func (api *httpAPI) Token(w http.ResponseWriter, r *http.Request) {
+	// Return if Method not POST
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Method must be POST"))
+		return
 	}
 }
