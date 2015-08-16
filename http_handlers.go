@@ -42,11 +42,6 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.EDebug(errors.New("Using response_mode " + responseMode))
 
-	// Get response_type
-	// if tmp := GetParam(r, "response_type"); tmp != "" {
-	// 	responseType = tmp
-	// }
-
 	if err.Error != "" {
 		utils.ELog(errors.New("Auth failed: " + err.Error))
 
@@ -93,11 +88,49 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// 3.1.3.  Token Endpoint
+// Must use TLS
 func (api *httpAPI) Token(w http.ResponseWriter, r *http.Request) {
 	// Return if Method not POST
 	if r.Method != "POST" {
+		err := AuthErrResp{
+			Error:            "invalid_request",
+			ErrorDescription: "Method must be POST",
+		}
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Method must be POST"))
+		r, _ := json.Marshal(err)
+		w.Write(r)
 		return
+	}
+
+	// Return if not HTTPS
+	if r.URL.Scheme != "https" {
+		err := AuthErrResp{
+			Error:            "invalid_request",
+			ErrorDescription: "TLS is required",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		r, _ := json.Marshal(err)
+		w.Write(r)
+		return
+	}
+
+	resp, err := api.srv.Token(w, r)
+	if err.Error != "" && err.StatusCode == 0 {
+		r, _ := json.Marshal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(r)
+		utils.EDebug(errors.New(string(r)))
+	} else if err.Error != "" {
+		// TODO: Return StatusCode and Headers from struct
+		r, _ := json.Marshal(resp)
+		utils.EDebug(errors.New("X" + string(r)))
+	} else {
+		// 3.1.3.3.  Successful Token Response
+		w.Header().Add("Cache-Control", "no-store")
+		w.Header().Add("Pragma", "no-cache")
+		r, _ := json.Marshal(resp)
+		w.Write(r)
+		utils.EDebug(errors.New(string(r)))
 	}
 }

@@ -1,6 +1,7 @@
 package bindings
 
 import (
+	"errors"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -104,6 +105,15 @@ func (ds *DummySource) Cache(c openid.Session) error {
 	}
 	sessions[c.Code] = c
 	return nil
+}
+
+func (ds *DummySource) GetSession(code string) (openid.Session, error) {
+	s, ok := sessions[code]
+	if !ok {
+		return openid.Session{}, errors.New("Invalid code")
+	} else {
+		return s, nil
+	}
 }
 
 func (ds *DummySource) Retire(code string) {

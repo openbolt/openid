@@ -3,7 +3,9 @@
 package openid
 
 import (
+	"crypto/ecdsa"
 	"errors"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/openbolt/openid/utils"
@@ -17,6 +19,10 @@ type OpenID struct {
 	Enduser   EnduserIf
 	Cache     Cacher
 
+	// Initialized on OpenID.Serve()
+	AccessTokenSignKeyFile string
+	accessTokenSignKey     *ecdsa.PrivateKey
+
 	// True, if server is fully started
 	serving bool
 }
@@ -25,6 +31,7 @@ type OpenID struct {
 func NewProvider() *OpenID {
 	op := new(OpenID)
 	op.serving = false
+
 	return op
 }
 
@@ -42,6 +49,19 @@ func (op *OpenID) Serve() error {
 	if op.Cache == nil {
 		return errors.New("No Cache defined")
 	}
+
+	// Load AccessToken Sign Key
+	raw, err := ioutil.ReadFile(op.AccessTokenSignKeyFile)
+	if err != nil {
+		return errors.New("Cannot read AccessTokenSignKeyFile: " + err.Error())
+	}
+	key, err := loadSigningKey(raw)
+	if err != nil {
+		return err
+	}
+	op.accessTokenSignKey = key
+
+	// Activate
 	op.serving = true
 
 	return nil
@@ -56,5 +76,6 @@ func (op *OpenID) AddServer(mux *http.ServeMux) error {
 	}
 
 	mux.HandleFunc("/authorize", api.Authorize)
+	mux.HandleFunc("/token", api.Token)
 	return nil
 }

@@ -69,16 +69,26 @@ func (op *OpenID) implicitFlow(r *http.Request, state AuthState) (AuthSuccessRes
 	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
 	if err != nil {
 		utils.ELog(err)
-		// TODO: Is it safe to continue program flow here?
+		return AuthSuccessResp{}, AuthErrResp{
+			Error:            "invalid_request",
+			ErrorDescription: "id_token not avaiable",
+		}
 	}
 
 	suc := AuthSuccessResp{ok: true}
 	suc.State = GetParam(r, "state")
-	suc.IDToken = NewIDToken(ses)
+	suc.IDToken, err = NewIDToken(ses)
+	if err != nil {
+		utils.ELog(err)
+		return AuthSuccessResp{}, AuthErrResp{
+			Error:            "invalid_request",
+			ErrorDescription: "id_token not avaiable",
+		}
+	}
 
 	if GetParam(r, "response_type") != "id_token" {
 		tok := AccessToken{}
-		tok.Load(ses)
+		tok.Load(ses, op.accessTokenSignKey)
 		suc.AccessToken = tok.Token
 		suc.TokenType = tok.TokenType
 		suc.ExpiresIn = tok.ExpiresIn
@@ -113,18 +123,28 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
 	if err != nil {
 		utils.ELog(err)
-		// TODO: Is it safe to continue program flow here?
+		return AuthSuccessResp{}, AuthErrResp{
+			Error:            "invalid_request",
+			ErrorDescription: "id_token not avaiable",
+		}
 	}
 
 	// Generate response value
 	suc := AuthSuccessResp{ok: true}
 	suc.State = GetParam(r, "state")
 	suc.Code = code
-	suc.IDToken = NewIDToken(ses)
+	suc.IDToken, err = NewIDToken(ses)
+	if err != nil {
+		utils.ELog(err)
+		return AuthSuccessResp{}, AuthErrResp{
+			Error:            "invalid_request",
+			ErrorDescription: "id_token not avaiable",
+		}
+	}
 
 	if GetParam(r, "response_type") != "id_token" {
 		tok := AccessToken{}
-		tok.Load(ses)
+		tok.Load(ses, op.accessTokenSignKey)
 		suc.AccessToken = tok.Token
 		suc.TokenType = tok.TokenType
 		suc.ExpiresIn = tok.ExpiresIn

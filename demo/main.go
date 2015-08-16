@@ -18,6 +18,9 @@ func main() {
 	op.Enduser = src
 	op.Cache = src
 
+	// ssh-keygen -t ecdsa -f accesstoken_signkey.pem
+	op.AccessTokenSignKeyFile = "./accesstoken_signkey.pem"
+
 	// Configure http api
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", helloWorld)

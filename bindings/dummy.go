@@ -41,5 +41,5 @@ func (ds DummySource) GetApplType(id string) string {
 // Returns true if host == localhost
 func (ds DummySource) ValidateRedirectURI(id, uri string) bool {
 	u, _ := url.Parse(uri)
-	return u.Host == "localhost:8080"
+	return u.Host == "localhost:8443" || u.Host == "localhost:8080"
 }

@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+const (
+	REQUIRE_401        = iota
+	CLIENT_NOT_ALLOWED = iota
+)
+
+// TODO: Resp struct tags: urltags also jsontags
+
 // AuthSuccessResp holds all parameters which can be returned to the user if nothing fails
 // Ref 3.1.3.3.  Successful Token Response
 type AuthSuccessResp struct {
@@ -21,10 +28,12 @@ type AuthSuccessResp struct {
 // AuthErrResp holds all parameters which can be returned to the user in error case
 // Ref 3.1.2.6.  Authentication Error Response
 type AuthErrResp struct {
-	Error            string `url:"error"`
-	ErrorDescription string `url:"error_description,omitempty"`
-	ErrorURI         string `url:"error_uri,omitempty"`
-	State            string `url:"state,omitempty"`
+	Error            string      `url:"error"`
+	ErrorDescription string      `url:"error_description,omitempty"`
+	ErrorURI         string      `url:"error_uri,omitempty"`
+	State            string      `url:"state,omitempty"`
+	StatusCode       int         `json:"omitted"`
+	Headers          http.Header `json:"ommited"`
 }
 
 /*
@@ -34,6 +43,7 @@ type AuthErrResp struct {
 // Cacher is used to cache sessions between code request and id_token retrieval
 type Cacher interface {
 	Cache(val Session) error
+	GetSession(code string) (Session, error)
 	Retire(code string)
 }
 

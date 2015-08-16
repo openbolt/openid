@@ -5,8 +5,8 @@ type IDToken struct {
 }
 
 // NewIDToken returns an IDToken according to parameters from Session
-func NewIDToken(ses Session) *IDToken {
-	return nil
+func NewIDToken(ses Session) (*IDToken, error) {
+	return nil, nil
 }
 
 // MarshalText is used to satisfy the encoding.TextMarshaler interface.
