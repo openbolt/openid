@@ -19,7 +19,7 @@ func (op *OpenID) authzCodeFlow(r *http.Request, state AuthState) (AuthSuccessRe
 	// Generate `code` for response
 	code, err := GetRandomString(AuthzCodeOctetsRand)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 
 		resp := AuthErrResp{}
 		resp.Error = "server_error"
@@ -45,7 +45,7 @@ func (op *OpenID) authzCodeFlow(r *http.Request, state AuthState) (AuthSuccessRe
 	ses.ClaimsLocales = GetParam(r, "claim_locales")
 	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 		// TODO: Is it safe to continue program flow here?
 	}
 
@@ -68,7 +68,7 @@ func (op *OpenID) implicitFlow(r *http.Request, state AuthState) (AuthSuccessRes
 	var err error
 	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 		return AuthSuccessResp{}, AuthErrResp{
 			Error:            "invalid_request",
 			ErrorDescription: "id_token not avaiable",
@@ -77,9 +77,9 @@ func (op *OpenID) implicitFlow(r *http.Request, state AuthState) (AuthSuccessRes
 
 	suc := AuthSuccessResp{ok: true}
 	suc.State = GetParam(r, "state")
-	suc.IDToken, err = NewIDToken(ses)
+	suc.IDToken, err = NewIDToken(ses, op.accessTokenSignKey)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 		return AuthSuccessResp{}, AuthErrResp{
 			Error:            "invalid_request",
 			ErrorDescription: "id_token not avaiable",
@@ -101,7 +101,7 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	// Generate `code` for response
 	code, err := GetRandomString(AuthzCodeOctetsRand)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 
 		resp := AuthErrResp{}
 		resp.Error = "server_error"
@@ -122,7 +122,7 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	ses.ClaimsLocales = GetParam(r, "claim_locales")
 	ses.Claims, err = ReadClaimsRequest(GetParam(r, "claims"))
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 		return AuthSuccessResp{}, AuthErrResp{
 			Error:            "invalid_request",
 			ErrorDescription: "id_token not avaiable",
@@ -133,9 +133,9 @@ func (op *OpenID) hybridFlow(r *http.Request, state AuthState) (AuthSuccessResp,
 	suc := AuthSuccessResp{ok: true}
 	suc.State = GetParam(r, "state")
 	suc.Code = code
-	suc.IDToken, err = NewIDToken(ses)
+	suc.IDToken, err = NewIDToken(ses, op.accessTokenSignKey)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, r)
 		return AuthSuccessResp{}, AuthErrResp{
 			Error:            "invalid_request",
 			ErrorDescription: "id_token not avaiable",

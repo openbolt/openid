@@ -39,7 +39,7 @@ func serializeResponse(redirectURI url.URL, responseMode string, data interface{
 
 	vals, err := uquery.Values(data)
 	if err != nil {
-		utils.ELog(errors.New("Cannot serialize to url"))
+		utils.ELog(errors.New("Cannot serialize to url"), nil)
 		return url.URL{}, err
 	}
 
@@ -104,7 +104,7 @@ func ReadClaimsRequest(data string) (ClaimsRequest, error) {
 	raw := csreq{}
 	err := json.Unmarshal([]byte(data), raw)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, nil)
 		return ClaimsRequest{}, err
 	}
 

@@ -71,7 +71,7 @@ func (op *OpenID) Serve() error {
 func (op *OpenID) AddServer(mux *http.ServeMux) error {
 	api, err := newAPI(op)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, nil)
 		return err
 	}
 

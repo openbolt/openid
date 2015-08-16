@@ -20,7 +20,7 @@ func (op *OpenID) Token(w http.ResponseWriter, r *http.Request) (AuthSuccessResp
 			Error:            "invalid_client",
 			ErrorDescription: "No client_id given",
 		}
-		utils.EDebug(errors.New("returning invalid_client"))
+		utils.EDebug(errors.New("returning invalid_client"), r)
 		return AuthSuccessResp{}, err
 	}
 
@@ -44,7 +44,7 @@ func (op *OpenID) Token(w http.ResponseWriter, r *http.Request) (AuthSuccessResp
 				StatusCode:       401,
 			}
 		}
-		utils.EDebug(errors.New("returning invalid_client"))
+		utils.EDebug(errors.New("returning invalid_client"), r)
 		return AuthSuccessResp{}, err
 	}
 
@@ -57,7 +57,7 @@ func (op *OpenID) Token(w http.ResponseWriter, r *http.Request) (AuthSuccessResp
 			Error:            "invalid_grant",
 			ErrorDescription: "Authorization Code is invalid",
 		}
-		utils.EDebug(errors.New("returning invalid_grant"))
+		utils.EDebug(errors.New("returning invalid_grant"), r)
 		return AuthSuccessResp{}, err
 	}
 
@@ -67,7 +67,7 @@ func (op *OpenID) Token(w http.ResponseWriter, r *http.Request) (AuthSuccessResp
 			Error:            "invalid_grant",
 			ErrorDescription: "Redirection URI is invalid",
 		}
-		utils.EDebug(errors.New("returning invalid_grant"))
+		utils.EDebug(errors.New("returning invalid_grant"), r)
 		return AuthSuccessResp{}, err
 	}
 
@@ -77,17 +77,17 @@ func (op *OpenID) Token(w http.ResponseWriter, r *http.Request) (AuthSuccessResp
 			Error:            "invalid_request",
 			ErrorDescription: "Code was not issued to an OIDC Auth Request",
 		}
-		utils.EDebug(errors.New("returning invalid_request"))
+		utils.EDebug(errors.New("returning invalid_request"), r)
 		return AuthSuccessResp{}, err
 	}
 
 	// Issue token according to variable `session`
-	idToken, err := NewIDToken(session)
+	idToken, err := NewIDToken(session, op.accessTokenSignKey)
 	atok := AccessToken{}
 	atok.Load(session, op.accessTokenSignKey)
 	if err == nil {
 		op.Cache.Retire(GetParam(r, "code"))
-		utils.EDebug(errors.New("returning ok"))
+		utils.EDebug(errors.New("returning ok"), r)
 		return AuthSuccessResp{
 			ok:          true,
 			IDToken:     idToken,
@@ -96,12 +96,12 @@ func (op *OpenID) Token(w http.ResponseWriter, r *http.Request) (AuthSuccessResp
 			ExpiresIn:   atok.ExpiresIn,
 		}, AuthErrResp{}
 	} else {
-		utils.EInfo(errors.New("Cannot generate IDToken: " + err.Error()))
+		utils.EInfo(errors.New("Cannot generate IDToken: "+err.Error()), r)
 		err := AuthErrResp{
 			Error:            "invalid_request",
 			ErrorDescription: "IDToken not avaiable",
 		}
-		utils.EDebug(errors.New("returning invalid_request"))
+		utils.EDebug(errors.New("returning invalid_request"), r)
 		return AuthSuccessResp{}, err
 	}
 }

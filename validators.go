@@ -109,7 +109,7 @@ var (
 func validateOAuthParams(r *http.Request) AuthErrResp {
 	test := func(parm string, re *regexp.Regexp, cont *string) bool {
 		if GetParam(r, parm) != "" && !re.MatchString(GetParam(r, parm)) {
-			utils.EDebug(errors.New(parm + " malformed"))
+			utils.EDebug(errors.New(parm+" malformed"), r)
 			*cont = *cont + parm + ";"
 			return false
 		}
@@ -138,13 +138,13 @@ func validateOAuthParams(r *http.Request) AuthErrResp {
 
 	resp := AuthErrResp{}
 	if ok {
-		utils.EDebug(errors.New("returning ok"))
+		utils.EDebug(errors.New("returning ok"), r)
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "One or more malformed request parameters: " + *errParm
 		resp.State = GetParam(r, "state")
 
-		utils.EDebug(errors.New("returning invalid_request"))
+		utils.EDebug(errors.New("returning invalid_request"), r)
 	}
 	return resp
 }
@@ -164,13 +164,13 @@ func validateScopeParam(r *http.Request) AuthErrResp {
 
 	resp := AuthErrResp{}
 	if ok {
-		utils.EDebug(errors.New("returning ok"))
+		utils.EDebug(errors.New("returning ok"), r)
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "Scope doesn't contain openid"
 		resp.State = GetParam(r, "state")
 
-		utils.EDebug(errors.New("returning invalid_request"))
+		utils.EDebug(errors.New("returning invalid_request"), r)
 	}
 	return resp
 }
@@ -210,7 +210,7 @@ func validateReqParams(r *http.Request, clt Clientsource) AuthErrResp {
 	flow := getFlow(GetParam(r, "response_type"))
 	if flow == "" {
 		s := "invalid response_type"
-		utils.EDebug(errors.New(s))
+		utils.EDebug(errors.New(s), r)
 		errs += s + ";"
 		ok = false
 	}
@@ -248,7 +248,7 @@ func validateReqParams(r *http.Request, clt Clientsource) AuthErrResp {
 	// MUST be present in the nonce values used to prevent attackers from guessing values
 	if flow == "implicit" && len(GetParam(r, "nonce")) == 0 {
 		s := "nonce not present in implicit flow"
-		utils.EDebug(errors.New(s))
+		utils.EDebug(errors.New(s), r)
 		errs += s + ";"
 		ok = false
 	}
@@ -256,13 +256,13 @@ func validateReqParams(r *http.Request, clt Clientsource) AuthErrResp {
 	// Return
 	resp := AuthErrResp{}
 	if ok {
-		utils.EDebug(errors.New("returning ok"))
+		utils.EDebug(errors.New("returning ok"), r)
 	} else {
 		resp.Error = "invalid_request"
 		resp.ErrorDescription = "One or more not valid parameters: " + errs
 		resp.State = GetParam(r, "state")
 
-		utils.EDebug(errors.New("returning invalid_request"))
+		utils.EDebug(errors.New("returning invalid_request"), r)
 	}
 	return resp
 }
@@ -279,7 +279,7 @@ func validateReqParams(r *http.Request, clt Clientsource) AuthErrResp {
 // in Section 5.5.1, if the claims parameter is supported by the implementation.
 func validateSubParam(r *http.Request, sub string) AuthErrResp {
 	// BUG(djboris) Implement
-	utils.EInfo(errors.New("returning ok, as Not Implemented"))
+	utils.EInfo(errors.New("returning ok, as Not Implemented"), r)
 	return AuthErrResp{}
 }
 
@@ -291,18 +291,18 @@ func checkRedirectURI(redirectURI, clientID, flow string, clt Clientsource) bool
 		// MAY use the http: scheme with localhost as the hostname.
 		uri, err := url.Parse(redirectURI)
 		if err != nil {
-			utils.EInfo(err)
+			utils.EInfo(err, nil)
 			return false
 		}
 		if uri.Scheme == "http" &&
 			(clt.GetApplType(clientID) != "native" || uri.Host != "localhost") {
-			utils.EDebug(errors.New("Not compatible redirect_uri"))
+			utils.EDebug(errors.New("Not compatible redirect_uri"), nil)
 			return false
 		}
 
 	} else {
 		if !clt.ValidateRedirectURI(clientID, redirectURI) {
-			utils.EDebug(errors.New("Client hasn't registered this redirect_uri"))
+			utils.EDebug(errors.New("Client hasn't registered this redirect_uri"), nil)
 			return false
 		}
 	}

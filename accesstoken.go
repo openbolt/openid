@@ -58,14 +58,15 @@ func (t *AccessToken) Load(ses Session, signkey *ecdsa.PrivateKey) *AccessToken 
 	signhash := h.Sum(nil)
 	r, s, err := ecdsa.Sign(rand.Reader, signkey, signhash)
 	if err != nil {
-		utils.ELog(err)
+		utils.ELog(err, nil)
 		return new(AccessToken)
 	}
 
 	signature := r.Bytes()
 	signature = append(signature, s.Bytes()...)
 	sigtext := base64.StdEncoding.EncodeToString(signature)
-	t.Token = t.Token + ";" + sigtext
+	// BUG Need to sign ";ES256;" also. Security.
+	t.Token = t.Token + ";ES256;" + sigtext
 	return &AccessToken{}
 }
 

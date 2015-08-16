@@ -3,10 +3,13 @@ package openid
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/gorilla/context"
 	"github.com/openbolt/openid/utils"
+	"github.com/pborman/uuid"
 )
 
 type httpAPI struct {
@@ -23,6 +26,8 @@ func newAPI(srv *OpenID) (*httpAPI, error) {
 // /authorize
 // ref 3.1.2.1
 func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
+	context.Set(r, REQUEST_UUID, string(uuid.NewUUID().String()))
+
 	// Return if Method not GET or POST
 	if r.Method != "GET" && r.Method != "POST" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -40,10 +45,10 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 	} else {
 		responseMode = "fragment"
 	}
-	utils.EDebug(errors.New("Using response_mode " + responseMode))
+	utils.EDebug(errors.New("Using response_mode "+responseMode), r)
 
 	if err.Error != "" {
-		utils.ELog(errors.New("Auth failed: " + err.Error))
+		utils.ELog(errors.New("Auth failed: "+err.Error), r)
 
 		// If redirect_uri is not valid, show error as JSON
 		redirectURI := GetParam(r, "redirect_uri")
@@ -52,7 +57,7 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 		t := checkRedirectURI(redirectURI, clientID, flow, api.srv.Clientsrc)
 		u, e := url.Parse(redirectURI)
 		if e != nil || !t {
-			utils.EDebug(e)
+			utils.EDebug(e, r)
 			r, _ := json.Marshal(err)
 			w.Write(r)
 			return
@@ -64,7 +69,7 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 		err.State = GetParam(r, "state")
 		*u, e = serializeResponse(*u, responseMode, err)
 		if e != nil {
-			utils.EDebug(e)
+			utils.EDebug(e, r)
 			r, _ := json.Marshal(err)
 			w.Write(r)
 			return
@@ -73,17 +78,17 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 		/*
 		 * Finish, Do 302 Redirect
 		 */
-		utils.EDebug(errors.New("Redirecting to " + u.String()))
+		utils.EDebug(errors.New("Redirecting to "+u.String()), r)
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	} else if resp.ok {
-		utils.EDebug(errors.New("Auth succeeded"))
+		utils.EDebug(errors.New("Auth succeeded"), r)
 
 		// Return success
 		redirectURI := GetParam(r, "redirect_uri")
 		u, _ := url.Parse(redirectURI)
 		*u, _ = serializeResponse(*u, responseMode, resp)
 
-		utils.EDebug(errors.New("Redirecting to " + u.String()))
+		utils.EDebug(errors.New("Redirecting to "+u.String()), r)
 		http.Redirect(w, r, u.String(), http.StatusFound)
 	}
 }
@@ -91,6 +96,8 @@ func (api *httpAPI) Authorize(w http.ResponseWriter, r *http.Request) {
 // 3.1.3.  Token Endpoint
 // Must use TLS
 func (api *httpAPI) Token(w http.ResponseWriter, r *http.Request) {
+	context.Set(r, REQUEST_UUID, string(uuid.NewUUID().String()))
+
 	// Return if Method not POST
 	if r.Method != "POST" {
 		err := AuthErrResp{
@@ -103,8 +110,9 @@ func (api *httpAPI) Token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return if not HTTPS
-	if r.URL.Scheme != "https" {
+	// Return if not HTTPS BUG: This doesn't work :(
+	if false { //|| r.URL.Scheme != "https" {
+		fmt.Println(r.URL.Scheme)
 		err := AuthErrResp{
 			Error:            "invalid_request",
 			ErrorDescription: "TLS is required",
@@ -117,20 +125,22 @@ func (api *httpAPI) Token(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := api.srv.Token(w, r)
 	if err.Error != "" && err.StatusCode == 0 {
-		r, _ := json.Marshal(err)
+		data, _ := json.Marshal(err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write(r)
-		utils.EDebug(errors.New(string(r)))
+		w.Write(data)
+		utils.EDebug(errors.New(string(data)), r)
 	} else if err.Error != "" {
 		// TODO: Return StatusCode and Headers from struct
-		r, _ := json.Marshal(resp)
-		utils.EDebug(errors.New("X" + string(r)))
-	} else {
+		data, _ := json.Marshal(resp)
+		utils.EDebug(errors.New("X"+string(data)), r)
+	} else if resp.ok {
 		// 3.1.3.3.  Successful Token Response
 		w.Header().Add("Cache-Control", "no-store")
 		w.Header().Add("Pragma", "no-cache")
-		r, _ := json.Marshal(resp)
-		w.Write(r)
-		utils.EDebug(errors.New(string(r)))
+		data, _ := json.Marshal(resp)
+		w.Write(data)
+		utils.EDebug(errors.New(string(data)), r)
+	} else {
+		//BUG: Return 500
 	}
 }

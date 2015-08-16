@@ -8,6 +8,7 @@ import (
 const (
 	REQUIRE_401        = iota
 	CLIENT_NOT_ALLOWED = iota
+	REQUEST_UUID       = "request-uuid"
 )
 
 // TODO: Resp struct tags: urltags also jsontags
@@ -16,13 +17,13 @@ const (
 // Ref 3.1.3.3.  Successful Token Response
 type AuthSuccessResp struct {
 	// Flag if this response is valid, MUST NOT be exported
-	ok          bool          `url:"-"`
-	Code        string        `url:"code,omitempty"`
-	State       string        `url:"state,omitempty"`
-	IDToken     *IDToken      `url:"id_token,omitempty"`
-	AccessToken string        `url:"access_token,omitempty"`
-	TokenType   string        `url:"token_type,omitempty"`
-	ExpiresIn   time.Duration `url:"expires_in,omitempty"`
+	ok          bool          `url:"-" json:"-"`
+	Code        string        `url:"code,omitempty" json:"code,omitempty"`
+	State       string        `url:"state,omitempty" json:"state,omitempty"`
+	IDToken     *IDToken      `url:"id_token,omitempty" json:"id_token,omitempty"`
+	AccessToken string        `url:"access_token,omitempty" json:"access_token,omitempty"`
+	TokenType   string        `url:"token_type,omitempty" json:"token_type,omitempty"`
+	ExpiresIn   time.Duration `url:"expires_in,omitempty" json:"expires_in,omitempty"`
 }
 
 // AuthErrResp holds all parameters which can be returned to the user in error case
@@ -51,15 +52,11 @@ type Cacher interface {
 type Claimsource interface {
 	// returns value, ok?
 	Get(id, claim, def string) (string, bool)
-	//	Set(id, claim, value string) error
-	//	Delete(id, claim string) error
-	//	DeleteRef(id string) error
 }
 
 // Clientsource is the databinding for OAuth 2.0 clients
 type Clientsource interface {
 	IsClient(id string) bool
-	//	GetClientType(id string) string
 	// returns "confidential", "public"
 	GetApplType(id string) string
 	// returns "web", "user-agent-based", "native"

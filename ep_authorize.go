@@ -23,15 +23,15 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 
 	// Check first part of validation
 	if len(err1.Error) != 0 {
-		utils.EDebug(errors.New("Failed Rule 1"))
+		utils.EDebug(errors.New("Failed Rule 1"), r)
 		return AuthSuccessResp{}, err1
 	}
 	if len(err2.Error) != 0 {
-		utils.EDebug(errors.New("Failed Rule 2"))
+		utils.EDebug(errors.New("Failed Rule 2"), r)
 		return AuthSuccessResp{}, err2
 	}
 	if len(err3.Error) != 0 {
-		utils.EDebug(errors.New("Failed Rule 3"))
+		utils.EDebug(errors.New("Failed Rule 3"), r)
 		return AuthSuccessResp{}, err3
 	}
 
@@ -40,37 +40,37 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 
 	// Respond to enduser if not successfully authenticated
 	if state.AuthAbort {
-		utils.EDebug(errors.New("Auth aborted"))
+		utils.EDebug(errors.New("Auth aborted"), r)
 		err := AuthErrResp{}
 		err.Error = "login_required"
 		err.ErrorDescription = "Authentication aborted"
 		err.State = GetParam(r, "state")
 		return AuthSuccessResp{}, err
 	} else if state.AuthFailed {
-		utils.EDebug(errors.New("Auth failed"))
+		utils.EDebug(errors.New("Auth failed"), r)
 		err := AuthErrResp{}
 		err.Error = "access_denied"
 		err.ErrorDescription = "Authentication failed"
 		err.State = GetParam(r, "state")
 		return AuthSuccessResp{}, err
 	} else if state.AuthPrompting {
-		utils.EDebug(errors.New("Auth prompting"))
+		utils.EDebug(errors.New("Auth prompting"), r)
 		// Simply return if a prompt is presented
 		return AuthSuccessResp{}, AuthErrResp{}
 	} else if !state.AuthOk {
-		utils.EDebug(errors.New("Auth requests reload"))
+		utils.EDebug(errors.New("Auth requests reload"), r)
 		// Reload page using the same method
 		w.Header().Set("Location", r.RequestURI)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else if state.AuthOk {
-		utils.EDebug(errors.New("Authpage returned ok"))
+		utils.EDebug(errors.New("Authpage returned ok"), r)
 	}
 
 	// Can only be checked after authentification
 	// (compare "sub" with requested `claims`->`sub`)
 	err4 := validateSubParam(r, state.Sub) // ref Rule 4
 	if len(err4.Error) != 0 {
-		utils.EDebug(errors.New("Failed Rule 4"))
+		utils.EDebug(errors.New("Failed Rule 4"), r)
 		return AuthSuccessResp{}, err4
 	}
 
@@ -78,16 +78,16 @@ func (op *OpenID) Authorize(w http.ResponseWriter, r *http.Request) (AuthSuccess
 	// ref 3
 	switch getFlow(GetParam(r, "response_type")) {
 	case "authorization_code":
-		utils.EDebug(errors.New("Using authzCodeFlow"))
+		utils.EDebug(errors.New("Using authzCodeFlow"), r)
 		return op.authzCodeFlow(r, state)
 	case "implicit":
-		utils.EDebug(errors.New("Using implicit flow"))
+		utils.EDebug(errors.New("Using implicit flow"), r)
 		return op.implicitFlow(r, state)
 	case "hybrid":
-		utils.EDebug(errors.New("Using hybrid flow"))
+		utils.EDebug(errors.New("Using hybrid flow"), r)
 		return op.hybridFlow(r, state)
 	default:
-		utils.EDebug(errors.New("invalid response_type, cannot find flow"))
+		utils.EDebug(errors.New("invalid response_type, cannot find flow"), r)
 		err := AuthErrResp{}
 		err.Error = "invalid_request"
 		err.ErrorDescription = "Invalid `code` request sent"
